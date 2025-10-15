@@ -1,6 +1,15 @@
 {
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx src/main.ts"
+  },
   "dependencies": {
-    "ts-node": "^10.9.2",
+    "@types/node": "^24.7.2",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6"
   }
 }
