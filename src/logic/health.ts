@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 
-export function handleHealth(
+export function getHealth(
   _: IncomingMessage,
   res: ServerResponse
 ) {

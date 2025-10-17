@@ -4,26 +4,33 @@ import handlers from './handlers.js';
 const PORT = 8080;
 
 const server = http.createServer((req, res) => {
-  const handler = handlers.find(
-    (handler) => handler.endpoint === req.url && handler.method === req.method
-  );
-
-  console.info(`New request to ${req.url}`);
-
-  if (handler === undefined) {
-    const endpointExists = handlers.some(
-      (handler) => handler.endpoint == req.url
+  try {
+    const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+    
+    const handler = handlers.find(
+      (handler) =>
+        handler.endpoint === url.pathname && handler.method === req.method
     );
+    
+    if (handler === undefined) {
+      const endpointExists = handlers.some(
+        (handler) => handler.endpoint == url.pathname
+      );
 
-    if (endpointExists) {
-      res.statusCode = 405;
+      if (endpointExists) {
+        res.statusCode = 405;
+      } else {
+        res.statusCode = 404;
+      }
+
+      res.end();
     } else {
-      res.statusCode = 404;
+      void handler.handler(req, res);
     }
-
-    res.end();
-  } else {
-    void handler.handler(req, res);
+  } catch (error) {
+    console.error('Error handling request:', error);
+    res.statusCode = 500;
+    res.end('Internal Server Error');
   }
 });
 

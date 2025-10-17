@@ -1,5 +1,7 @@
 import type { ServerResponse, IncomingMessage } from 'http';
-import { handleHealth } from './logic/health.js';
+import { getHealth } from './logic/health.js';
+import { getRoot, postRoot } from './logic/root.js';
+import { getGame } from './logic/game.js';
 
 type Route = {
   endpoint: string;
@@ -11,6 +13,21 @@ export default [
   {
     endpoint: '/health',
     method: 'GET',
-    handler: handleHealth,
+    handler: getHealth,
   },
+  {
+    endpoint: '/',
+    method: 'GET',
+    handler: getRoot,
+  },
+  {
+    endpoint: '/',
+    method: 'POST',
+    handler: postRoot,
+  },
+  {
+    endpoint: '/game',
+    method: 'GET',
+    handler: getGame,
+  }
 ] as Route[];
