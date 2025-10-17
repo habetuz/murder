@@ -1,17 +1,25 @@
 import http from 'http';
 import handlers from './handlers.js';
+import { getStaticFile } from './logic/static.js';
 
 const PORT = 8080;
 
 const server = http.createServer((req, res) => {
   try {
-    const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+    console.info(`Received ${req.method} request for ${req.url}`);
     
+    const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+
+    if (url.pathname.startsWith('/static')) {
+      void getStaticFile(req, res);
+      return;
+    }
+
     const handler = handlers.find(
       (handler) =>
         handler.endpoint === url.pathname && handler.method === req.method
     );
-    
+
     if (handler === undefined) {
       const endpointExists = handlers.some(
         (handler) => handler.endpoint == url.pathname
