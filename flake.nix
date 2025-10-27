@@ -39,6 +39,10 @@
               node2nix
               nodejs_24
             ];
+            
+            env = {
+              URL = "http://localhost:8080";
+            };
           };
         }
       );
