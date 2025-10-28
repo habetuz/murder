@@ -1,0 +1,10 @@
+services:
+  murder-app:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: murder-app
+    ports:
+      - '8080:8080'
+    environment:
+      - URL=http://localhost:8080

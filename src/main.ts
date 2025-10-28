@@ -53,6 +53,6 @@ fs.mkdir('./static', { recursive: true });
 
 await QRCode.toFile('./static/qrcode.png', url);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.info(`Server is running on port ${PORT}`);
 });
