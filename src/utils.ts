@@ -14,3 +14,22 @@ export async function parseRequestBody(req: IncomingMessage): Promise<string> {
     });
   });
 }
+
+// Fisher–Yates Shuffle from https://bost.ocks.org/mike/shuffle/
+export function shuffle<T>(array: Array<T>) {
+  var m = array.length, t, i;
+
+  // While there remain elements to shuffle…
+  while (m) {
+
+    // Pick a remaining element…
+    i = Math.floor(Math.random() * m--);
+
+    // And swap it with the current element.
+    t = array[m] as T;
+    array[m] = array[i] as T;
+    array[i] = t;
+  }
+
+  return array;
+}

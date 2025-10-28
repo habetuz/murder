@@ -1,4 +1,38 @@
-<!DOCTYPE html>
-<body>
-    <p>You are a registered player!</p>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Player - Murder Game</title>
+  </head>
+  <body>
+    <div id="content">Loading...</div>
+    <script>
+      async function updatePage() {
+        const contentContainer = document.getElementById('content');
+
+        const player = new URLSearchParams(window.location.search).get(
+          'player'
+        );
+
+        try {
+          const response = await fetch(`/status?player=${player}`);
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch player status');
+          }
+
+          contentContainer.innerHTML = await response.text();
+        } catch (error) {
+          console.error('Error loading player status:', error);
+        }
+      }
+
+      // Load players when page loads
+      document.addEventListener('DOMContentLoaded', updatePage);
+
+      // Auto-refresh players every second
+      setInterval(updatePage, 1000);
+    </script>
+  </body>
+</html>

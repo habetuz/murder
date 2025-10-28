@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Page - Murder Game</title>
+  </head>
+  <body>
+    <div class="section">
+      <h2>Registered Players</h2>
+      <ul id="playerList">
+        <li>Loading players...</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Registration QR Code</h2>
+      <img
+        src="/static/qrcode.png"
+        alt="Registration QR Code"
+        class="qr-code"
+        id="qrCode"
+      />
+      <p><strong>Scan this QR code to register for the game</strong></p>
+    </div>
+    <div class="section">
+        <button onclick="fetch('/api/start-game', { method: 'POST' })">Start Game</button>
+    </div>
+    <script>
+      async function loadPlayers() {
+        const playerList = document.getElementById('playerList');
+
+        try {
+          const response = await fetch('/api/players');
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch players');
+          }
+
+          const players = await response.json();
+
+          if (players.length === 0) {
+            playerList.innerHTML =
+              '<li>No players registered yet</li>';
+          } else {
+            playerList.innerHTML = players
+              .map(
+                (playerName, _) => `<li class="player-item">${escapeHtml(playerName)}</li>`
+              )
+              .join('');
+          }
+        } catch (error) {
+          console.error('Error loading players:', error);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', loadPlayers);
+
+      setInterval(loadPlayers, 1000);
+
+      // Helper function to escape HTML and prevent XSS
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    </script>
+  </body>
+</html>
