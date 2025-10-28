@@ -8,7 +8,7 @@ RUN npm ci --only=production && \
     npm install tsx typescript @types/node
 
 COPY src ./src
-COPY static ./static
+# COPY static ./static No static files currently
 COPY tsconfig.json ./
 
 EXPOSE 8080
