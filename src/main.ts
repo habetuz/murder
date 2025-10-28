@@ -2,6 +2,7 @@ import http from 'http';
 import handlers from './handlers.js';
 import { getStaticFile } from './logic/static.js';
 import QRCode from 'qrcode';
+import * as fs from 'fs/promises';
 
 const PORT = 8080;
 
@@ -47,6 +48,8 @@ const url = process.env['URL'];
 if (!url) {
   throw new Error('URL environment variable is not set');
 }
+
+fs.mkdir('./static', { recursive: true });
 
 await QRCode.toFile('./static/qrcode.png', url);
 
