@@ -4,6 +4,94 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Player - Murder Game</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+        min-height: 100vh;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #content {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        max-width: 600px;
+        width: 100%;
+        min-height: 200px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.1rem;
+        color: #333;
+      }
+
+      /* Styling for dynamically loaded content */
+      #content h1,
+      #content h2,
+      #content h3 {
+        color: #134e5e;
+        margin-bottom: 1rem;
+      }
+
+      #content p {
+        margin-bottom: 0.75rem;
+        line-height: 1.6;
+      }
+
+      #content button {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        margin: 0.5rem;
+      }
+
+      #content button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(19, 78, 94, 0.4);
+      }
+
+      #content button:active {
+        transform: translateY(0);
+      }
+
+      #content ul {
+        list-style-position: inside;
+        margin: 1rem 0;
+      }
+
+      #content li {
+        padding: 0.5rem 0;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 1rem;
+        }
+
+        #content {
+          padding: 2rem;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="content">Loading...</div>
