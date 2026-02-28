@@ -26,11 +26,11 @@ namespace Infrastructure {
         }
 
         class AuthenticationService <<usecase>> {
-            +login(IdentityId, Credential): SessionToken
+            +login(MethodName, IncomingCredential): SessionToken
             +logout(SessionToken): void
             +validate(SessionToken): IdentityId
-            +addMethod(IdentityId, Credential): AuthenticationMethodId
-            +removeMethod(IdentityId, AuthenticationMethodId): void
+            +addMethod(IdentityId, MethodName, IncomingCredential): void
+            +removeMethod(IdentityId, MethodName): void
         }
 
         GameDomain.OwnerId .. IdentityDomain.IdentityId : context mapping
@@ -119,11 +119,11 @@ namespace Infrastructure {
             }
 
             interface CredentialRepository <<repository>> {
-                +storeCredential(IdentityId, MethodName, Credential) : void
-                +retrieveCredentialOfType(IdentityId, MethodName) : void
-                +retrieveMethodNames(IdentityId) : MethodName[]
-                +deleteMethodName(Identity, MethodName) : void
-                +hasMethodName(Identity, MethodName) : void
+                +store(IdentityId, CredentialSerializer, StoredCredential): void
+                +find(IdentityId, MethodName, CredentialSerializer): StoredCredential?
+                +findMethods(IdentityId): MethodName[]
+                +delete(IdentityId, MethodName): void
+                +exists(IdentityId, MethodName): bool
             }
 
             class IdentityId <<value object>> {
@@ -145,44 +145,36 @@ namespace Infrastructure {
                 Deleted
             }
 
-            class Credential <<value object>> {
-                +payload: HashMap<string, string>
+            interface IncomingCredential <<port>> {
+                +methodName : MethodName
+            }
+
+            interface StoredCredential <<port>> {
+                +methodName : MethodName
+            }
+
+            interface CredentialSerializer <<port>> {
+                +methodName(): MethodName
+                +serialize(StoredCredential): string
+                +deserialize(string): StoredCredential
+                +prepare(IncomingCredential): StoredCredential
             }
 
             class MethodName <<value object>> {
                 +type: string
             }
 
-            class Session <<entity>> {
-                +id: SessionId
-                +token: SessionToken
-                +expiresAt: DateTime?
-
-                +isExpired(): bool
-                +invalidate(): void
-            }
-
-            class SessionId <<value object>> {
-                -id: string
-            }
-
-            class SessionToken <<value object>> {
-                -token: string
-            }
-
             interface AuthenticationMethod <<port>> {
-                +methodName: MethodName
-                +authenticate(HashMap<IdentityId, Credential>, Credential) : IdentityId
+                +methodName : MethodName
+                +serializer(): CredentialSerializer
+                +resolve(IncomingCredential): IdentityId?
+                +verify(IncomingCredential): bool
             }
 
-            class Authenticator {
-                -methods : AuthenticationMethod[]
-
-                authenticate(MethodName, Credential): IdentityId
-            }
-
-
-            interface SessionRepository <<repository>> {
+            class Authenticator <<domain service>> {
+                -methods : HashMap<MethodName, AuthenticationMethod>
+                -credentialsRepo : CredentialRepository
+                +authenticate(IncomingCredential): IdentityId
             }
 
             User --* UserState : contains
@@ -190,16 +182,17 @@ namespace Infrastructure {
             Identity --* IdentityId : identified by
             IdentityRepository --> IdentityId : uses
 
-            AuthenticationMethod --* AuthenticationMethodId : identified by
-            AuthenticationMethod --* IdentityId : belongs to
-            AuthenticationMethod ..> ICredentialVerifier : uses
-            AuthenticationMethod ..> Credential : verified via
-            AuthenticationRepository --o AuthenticationMethod : stores
-            AuthenticationRepository ..> IdentityId : uses
-            Session --* SessionId : identified by
-            Session --* SessionToken : holds
-            Session --* IdentityId : belongs to
-            SessionRepository --o Session : stores
+            Authenticator --* AuthenticationMethod : delegates to
+            AuthenticationMethod ..> IncomingCredential : receives
+            AuthenticationMethod ..> StoredCredential : verifies against
+            AuthenticationMethod ..> IdentityId : resolves
+            AuthenticationMethod --> CredentialSerializer : provides
+            CredentialSerializer ..> StoredCredential : serializes
+            CredentialSerializer ..> IncomingCredential : prepares from
+            CredentialRepository ..> CredentialSerializer : uses
+            CredentialRepository ..> IdentityId : uses
+            CredentialRepository ..> MethodName : uses
+            CredentialRepository ..> StoredCredential : stores
         }
     }
 
