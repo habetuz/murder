@@ -1,0 +1,208 @@
+@startuml Murder UML
+skinparam DefaultFontName Times New Roman
+
+namespace Infrastructure {
+    namespace Application {
+
+        class GameService <<usecase>> {
+            +listJoinedGames(PlayerId): GameId
+            +listPublicGames(): []GameId
+            +getGame(GameId): Game
+            +joinGame(GameId, PlayerId): void
+            +leaveGame(GameId, PlayerId): void
+            +startGame(GameId): void
+            +endGame(GameId): void
+            +createGame(string, PlayerId, Visibility, DateTime?): Game
+            +deleteGame(GameId): void
+        }
+
+        class IdentityService <<usecase>> {
+            +getIdentity(IdentityId): Identity
+            +isUser(IdentityId): bool
+            +isGuest(IdentityId): bool
+            +createUser(string): IdentityId
+            +createGuest(): IdentityId
+            +deactivateUser(IdentityId): void
+        }
+
+        class AuthenticationService <<usecase>> {
+            +login(IdentityId, Credential): SessionToken
+            +logout(SessionToken): void
+            +validate(SessionToken): IdentityId
+            +addMethod(IdentityId, Credential): AuthenticationMethodId
+            +removeMethod(IdentityId, AuthenticationMethodId): void
+        }
+
+        GameDomain.OwnerId .. IdentityDomain.IdentityId : context mapping
+
+        namespace GameDomain {
+            interface GameRepository <<repository>> {
+            }
+
+            interface PlayerRepository <<repository>> {
+            }
+
+            class Player <<entity>> {
+                +id: PlayerId
+                +owner: OwnerId
+            }
+
+            class GameAggregate.MurderChain <<value object>> {
+                -chain : LinkedList<PlayerId>
+
+                ~killOf(PlayerId) : PlayerId
+                ~kill(PLayerId, PlayerId) : PlayerId
+                ~leaderboard() : HashMap<PlayerId, int>
+                ~participants() : PlayerId[]
+            }
+
+            class GameAggregate.Game <<entity, aggregate root>> {
+                -murderChain: MurderChain
+                +id : GameId
+                +name : String
+                +visibility: Visibility
+                +startTime: DateTime
+                +endTime: DateTime?
+                +admin: PlayerId
+
+                +killOf(PlayerId) : PlayerId
+                +kill(PLayerId, PlayerId) : PlayerId
+                +leaderboard() : HashMap<PlayerId, int>
+                +participants() : PlayerId[]
+            }
+
+            class GameFactory <<factory>> {
+                +create(string, []PlayerId, PlayerId, Visibility, DateTime, DateTime?) : Game
+            }
+
+
+            class GameId <<value object>> {
+                - id: string
+            }
+
+            class PlayerId <<value object>> {
+                - id: string
+            }
+
+            class OwnerId <<value object>> {
+                - id: string
+            }
+
+            enum Visibility <<value object>> {
+                Public
+                Private
+            }
+
+            GameAggregate.Game --* GameAggregate.MurderChain : contains
+            GameFactory --> GameAggregate.Game : creates
+            GameAggregate.Game --* Visibility : contains
+            GameAggregate.MurderChain --* PlayerId : contains many
+            GameAggregate.Game --* PlayerId : contains
+            GameAggregate.Game --* GameId : identified by
+            GameRepository --o GameAggregate.Game : stores
+            PlayerRepository --o Player : stores
+            GameRepository ..> GameId : uses
+            GameRepository ..> PlayerId : uses
+            PlayerRepository ..> PlayerId : uses
+            PlayerRepository ..> GameId : uses
+            Player --* PlayerId : identified by
+            Player --* OwnerId : owned by
+        }
+
+        namespace IdentityDomain {
+            interface Identity <<entity>> {
+                +id : IdentityId
+                +name : string
+            }
+
+            interface IdentityRepository <<repository>> {
+            }
+
+            interface CredentialRepository <<repository>> {
+                +storeCredential(IdentityId, MethodName, Credential) : void
+                +retrieveCredentialOfType(IdentityId, MethodName) : void
+                +retrieveMethodNames(IdentityId) : MethodName[]
+                +deleteMethodName(Identity, MethodName) : void
+                +hasMethodName(Identity, MethodName) : void
+            }
+
+            class IdentityId <<value object>> {
+                -id : string
+            }
+
+            class User <<entity>> implements Identity {
+                +state : UserState
+
+                construct(string) : User
+            }
+
+            class Guest <<entity>> implements Identity {
+                construct() : Guest
+            }
+
+            enum UserState <<value object>> {
+                Active
+                Deleted
+            }
+
+            class Credential <<value object>> {
+                +payload: HashMap<string, string>
+            }
+
+            class MethodName <<value object>> {
+                +type: string
+            }
+
+            class Session <<entity>> {
+                +id: SessionId
+                +token: SessionToken
+                +expiresAt: DateTime?
+
+                +isExpired(): bool
+                +invalidate(): void
+            }
+
+            class SessionId <<value object>> {
+                -id: string
+            }
+
+            class SessionToken <<value object>> {
+                -token: string
+            }
+
+            interface AuthenticationMethod <<port>> {
+                +methodName: MethodName
+                +authenticate(HashMap<IdentityId, Credential>, Credential) : IdentityId
+            }
+
+            class Authenticator {
+                -methods : AuthenticationMethod[]
+
+                authenticate(MethodName, Credential): IdentityId
+            }
+
+
+            interface SessionRepository <<repository>> {
+            }
+
+            User --* UserState : contains
+            IdentityRepository --> Identity : stores
+            Identity --* IdentityId : identified by
+            IdentityRepository --> IdentityId : uses
+
+            AuthenticationMethod --* AuthenticationMethodId : identified by
+            AuthenticationMethod --* IdentityId : belongs to
+            AuthenticationMethod ..> ICredentialVerifier : uses
+            AuthenticationMethod ..> Credential : verified via
+            AuthenticationRepository --o AuthenticationMethod : stores
+            AuthenticationRepository ..> IdentityId : uses
+            Session --* SessionId : identified by
+            Session --* SessionToken : holds
+            Session --* IdentityId : belongs to
+            SessionRepository --o Session : stores
+        }
+    }
+
+}
+
+@enduml
