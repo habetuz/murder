@@ -4,7 +4,7 @@ skinparam DefaultFontName Times New Roman
 namespace Infrastructure {
     namespace Application {
 
-        class GameService <<usecase>> {
+        class GameService <<application service>> {
             +listJoinedGames(PlayerId): GameId
             +listPublicGames(): []GameId
             +getGame(GameId): Game
@@ -16,7 +16,7 @@ namespace Infrastructure {
             +deleteGame(GameId): void
         }
 
-        class IdentityService <<usecase>> {
+        class IdentityService <<application service>> {
             +getIdentity(IdentityId): Identity
             +isUser(IdentityId): bool
             +isGuest(IdentityId): bool
@@ -25,7 +25,7 @@ namespace Infrastructure {
             +deactivateUser(IdentityId): void
         }
 
-        class AuthenticationService <<usecase>> {
+        class AuthenticationService <<application service>> {
             +login(IncomingCredential): CredentialId
             +validate(IncomingCredential): IdentityId
             +revokeCredential(CredentialId): void
@@ -35,11 +35,36 @@ namespace Infrastructure {
 
         GameDomain.OwnerId .. IdentityDomain.IdentityId : context mapping
 
+        GameService ..> GameDomain.GameRepository : uses
+        GameService ..> GameDomain.PlayerRepository : uses
+        GameService ..> GameDomain.GameFactory : delegates creation to
+        GameService ..> GameDomain.GameAggregate.Game : returns
+
+        IdentityService ..> IdentityDomain.IdentityRepository : uses
+        IdentityService ..> IdentityDomain.User : creates
+        IdentityService ..> IdentityDomain.Guest : creates
+
+        AuthenticationService ..> IdentityDomain.Authenticator : delegates to
+        AuthenticationService ..> IdentityDomain.CredentialRepository : uses
+
         namespace GameDomain {
             interface GameRepository <<repository>> {
+                +findById(GameId): Game?
+                +findByPlayer(PlayerId): GameId[]
+                +findPublic(): GameId[]
+                +store(Game): void
+                +update(Game): void
+                +delete(GameId): void
+                +exists(GameId): bool
             }
 
             interface PlayerRepository <<repository>> {
+                +findById(PlayerId): Player?
+                +findByGame(GameId): Player[]
+                +findByOwner(OwnerId): Player?
+                +store(Player): void
+                +delete(PlayerId): void
+                +exists(PlayerId): bool
             }
 
             class Player <<entity>> {
@@ -105,6 +130,7 @@ namespace Infrastructure {
             GameRepository ..> PlayerId : uses
             PlayerRepository ..> PlayerId : uses
             PlayerRepository ..> GameId : uses
+            PlayerRepository ..> OwnerId : uses
             Player --* PlayerId : identified by
             Player --* OwnerId : owned by
         }
@@ -188,11 +214,11 @@ namespace Infrastructure {
             }
 
             User --* UserState : contains
-            IdentityRepository --> Identity : stores
+            IdentityRepository --o Identity : stores
             Identity --* IdentityId : identified by
-            IdentityRepository --> IdentityId : uses
+            IdentityRepository ..> IdentityId : uses
 
-            Authenticator --* AuthenticationMethod : delegates to
+            Authenticator --o AuthenticationMethod : delegates to
             AuthenticationMethod ..> IncomingCredential : receives
             AuthenticationMethod ..> StoredCredential : verifies against
             AuthenticationMethod ..> IdentityId : resolves
@@ -201,10 +227,10 @@ namespace Infrastructure {
             CredentialSerializer ..> StoredCredential : serializes
             CredentialSerializer ..> IncomingCredential : prepares from
             CredentialRepository ..> CredentialSerializer : uses
-            CredentialRepository ..> CredentialId : identified by
+            CredentialRepository ..> CredentialId : uses
             CredentialRepository ..> IdentityId : uses
             CredentialRepository ..> MethodName : uses
-            CredentialRepository ..> StoredCredential : stores
+            CredentialRepository ..> StoredCredential : uses
             StoredCredential --* MethodName : contains
             IncomingCredential --* MethodName : contains
         }
