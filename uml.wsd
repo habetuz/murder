@@ -26,9 +26,9 @@ namespace Infrastructure {
         }
 
         class AuthenticationService <<usecase>> {
-            +login(MethodName, IncomingCredential): SessionToken
-            +logout(SessionToken): void
-            +validate(SessionToken): IdentityId
+            +login(IncomingCredential): CredentialId
+            +validate(IncomingCredential): IdentityId
+            +revokeCredential(CredentialId): void
             +addMethod(IdentityId, MethodName, IncomingCredential): void
             +removeMethod(IdentityId, MethodName): void
         }
@@ -116,14 +116,20 @@ namespace Infrastructure {
             }
 
             interface IdentityRepository <<repository>> {
+                +identityById(IdentityId) : Identity
+                +identityOfName(string) : IdentityId
+                +store(Identity) : void
+                +update(Identity) : void
+                +delete(IdentityId) : void
             }
 
             interface CredentialRepository <<repository>> {
-                +store(IdentityId, CredentialSerializer, StoredCredential): void
-                +find(IdentityId, MethodName, CredentialSerializer): StoredCredential?
-                +findMethods(IdentityId): MethodName[]
-                +delete(IdentityId, MethodName): void
-                +exists(IdentityId, MethodName): bool
+                +store(IdentityId, CredentialSerializer, StoredCredential): CredentialId
+                +findById(CredentialId, CredentialSerializer): (IdentityId, StoredCredential)?
+                +findAll(IdentityId, MethodName): CredentialId[]
+                +delete(CredentialId): void
+                +deleteAll(IdentityId, MethodName): void
+                +exists(CredentialId): bool
             }
 
             class IdentityId <<value object>> {
@@ -164,6 +170,10 @@ namespace Infrastructure {
                 +type: string
             }
 
+            class CredentialId <<value object>> {
+                -id: string
+            }
+
             interface AuthenticationMethod <<port>> {
                 +methodName : MethodName
                 +serializer(): CredentialSerializer
@@ -186,13 +196,17 @@ namespace Infrastructure {
             AuthenticationMethod ..> IncomingCredential : receives
             AuthenticationMethod ..> StoredCredential : verifies against
             AuthenticationMethod ..> IdentityId : resolves
+            AuthenticationMethod --* MethodName : contains
             AuthenticationMethod --> CredentialSerializer : provides
             CredentialSerializer ..> StoredCredential : serializes
             CredentialSerializer ..> IncomingCredential : prepares from
             CredentialRepository ..> CredentialSerializer : uses
+            CredentialRepository ..> CredentialId : identified by
             CredentialRepository ..> IdentityId : uses
             CredentialRepository ..> MethodName : uses
             CredentialRepository ..> StoredCredential : stores
+            StoredCredential --* MethodName : contains
+            IncomingCredential --* MethodName : contains
         }
     }
 
