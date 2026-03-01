@@ -60,8 +60,7 @@ namespace Infrastructure {
 
             interface PlayerRepository <<repository>> {
                 +findById(PlayerId): Player?
-                +findByGame(GameId): Player[]
-                +findByOwner(OwnerId): Player?
+                +findByOwner(OwnerId): Player[]
                 +store(Player): void
                 +delete(PlayerId): void
                 +exists(PlayerId): bool
