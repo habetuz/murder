@@ -5,15 +5,36 @@ namespace Infrastructure {
     namespace Application {
 
         class GameService <<application service>> {
-            +listJoinedGames(PlayerId): GameId
-            +listPublicGames(): []GameId
-            +getGame(GameId): Game
+            -repository : GameRepository
+
+            +listJoinedGames(PlayerId): GameId[]
+            +listPublicGames(): GameId[]
+            +getGame(GameId): GameDTO
             +joinGame(GameId, PlayerId): void
             +leaveGame(GameId, PlayerId): void
-            +startGame(GameId): void
+            +startGame(GameId, EndDate?): void
             +endGame(GameId): void
-            +createGame(string, PlayerId, Visibility, DateTime?): Game
+            +createGame(string, PlayerId, Visibility): GameId
+            +renameGame(GameId, string) : void
+            +describeGame(GameId, string) : void
+            +changeEnd(GameId, DateTime) : void
             +deleteGame(GameId): void
+            +killOf(PlayerId) : PlayerId
+            +kill(PlayerId, PlayerId) : PlayerId
+            +leaderboard(GameId) : HashMap<PlayerId, int>
+            +participants(GameId) : PlayerId[]
+        }
+
+        class GameDTO <<value object>> {
+            +id : GameId
+            +name : String
+            +description : String?
+            +visibility : Visibility
+            +startTime : DateTime?
+            +endTime : EndTime?
+            +admin : PlayerId
+            +participants : PlayerId[]
+            +gameState : GameState
         }
 
         class IdentityService <<application service>> {
@@ -33,12 +54,12 @@ namespace Infrastructure {
             +removeMethod(IdentityId, MethodName): void
         }
 
-        GameDomain.OwnerId .. IdentityDomain.IdentityId : context mapping
+        GameDomain.PlayerId .. IdentityDomain.IdentityId : context mapping
 
         GameService ..> GameDomain.GameRepository : uses
-        GameService ..> GameDomain.PlayerRepository : uses
         GameService ..> GameDomain.GameFactory : delegates creation to
-        GameService ..> GameDomain.GameAggregate.Game : returns
+        GameService ..> GameDomain.GameAggregate.Game : uses
+        GameService ..> GameDTO : returns
 
         IdentityService ..> IdentityDomain.IdentityRepository : uses
         IdentityService ..> IdentityDomain.User : creates
@@ -49,26 +70,19 @@ namespace Infrastructure {
 
         namespace GameDomain {
             interface GameRepository <<repository>> {
-                +findById(GameId): Game?
-                +findByPlayer(PlayerId): GameId[]
-                +findPublic(): GameId[]
+                +findGameById(GameId): Game?
+                +findPlayerById(PlayerId): Player?
+                +listPublic(): GameId[]
                 +store(Game): void
                 +update(Game): void
                 +delete(GameId): void
-                +exists(GameId): bool
-            }
-
-            interface PlayerRepository <<repository>> {
-                +findById(PlayerId): Player?
-                +findByOwner(OwnerId): Player[]
-                +store(Player): void
-                +delete(PlayerId): void
-                +exists(PlayerId): bool
+                +existsGame(GameId): bool
+                +existsPlayer(PlayerId) : bool
             }
 
             class Player <<entity>> {
-                +id: PlayerId
-                +owner: OwnerId
+                +id : PlayerId
+                +games : GameId[]
             }
 
             class GameAggregate.MurderChain <<value object>> {
@@ -84,8 +98,9 @@ namespace Infrastructure {
                 -murderChain: MurderChain
                 +id : GameId
                 +name : String
+                +description : String?
                 +visibility: Visibility
-                +startTime: DateTime
+                +startTime: DateTime?
                 +endTime: DateTime?
                 +admin: PlayerId
 
@@ -93,6 +108,15 @@ namespace Infrastructure {
                 +kill(PLayerId, PlayerId) : PlayerId
                 +leaderboard() : HashMap<PlayerId, int>
                 +participants() : PlayerId[]
+                +start() : void
+                +end() : void
+                +state() : GameState
+            }
+
+            enum GameState <<value object>> {
+                Pending
+                Running
+                Ended
             }
 
             class GameFactory <<factory>> {
@@ -108,10 +132,6 @@ namespace Infrastructure {
                 - id: string
             }
 
-            class OwnerId <<value object>> {
-                - id: string
-            }
-
             enum Visibility <<value object>> {
                 Public
                 Private
@@ -120,18 +140,15 @@ namespace Infrastructure {
             GameAggregate.Game --* GameAggregate.MurderChain : contains
             GameFactory --> GameAggregate.Game : creates
             GameAggregate.Game --* Visibility : contains
+            GameAggregate.Game --* GameState : contains
             GameAggregate.MurderChain --* PlayerId : contains many
             GameAggregate.Game --* PlayerId : contains
             GameAggregate.Game --* GameId : identified by
             GameRepository --o GameAggregate.Game : stores
-            PlayerRepository --o Player : stores
+            GameRepository --o Player : stores
             GameRepository ..> GameId : uses
             GameRepository ..> PlayerId : uses
-            PlayerRepository ..> PlayerId : uses
-            PlayerRepository ..> GameId : uses
-            PlayerRepository ..> OwnerId : uses
             Player --* PlayerId : identified by
-            Player --* OwnerId : owned by
         }
 
         namespace IdentityDomain {
