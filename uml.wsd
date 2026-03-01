@@ -47,10 +47,12 @@ namespace Infrastructure {
         }
 
         class AuthenticationService <<application service>> {
-            +login(IncomingCredential): CredentialId
-            +validate(IncomingCredential): IdentityId
+            -authenticator : Authenticator
+            -credentialRepo : CredentialRepository
+
+            +authenticate(IncomingCredential): IdentityId
             +revokeCredential(CredentialId): void
-            +addMethod(IdentityId, MethodName, IncomingCredential): void
+            +addMethod(IdentityId, MethodName, EnrollmentData?): EnrollmentResult
             +removeMethod(IdentityId, MethodName): void
         }
 
@@ -166,8 +168,8 @@ namespace Infrastructure {
             }
 
             interface CredentialRepository <<repository>> {
-                +store(IdentityId, CredentialSerializer, StoredCredential): CredentialId
-                +findById(CredentialId, CredentialSerializer): (IdentityId, StoredCredential)?
+                +store(IdentityId, StoredCredential): CredentialId
+                +findById(CredentialId): (IdentityId, StoredCredential)?
                 +findAll(IdentityId, MethodName): CredentialId[]
                 +delete(CredentialId): void
                 +deleteAll(IdentityId, MethodName): void
@@ -201,12 +203,20 @@ namespace Infrastructure {
                 +methodName : MethodName
             }
 
-            interface CredentialSerializer <<port>> {
-                +methodName(): MethodName
-                +serialize(StoredCredential): string
-                +deserialize(string): StoredCredential
-                +prepare(IncomingCredential): StoredCredential
+            interface EnrollmentData <<port>> {
+                +methodName : MethodName
             }
+
+            class EnrollmentResult <<value object>> {
+                +credential : StoredCredential?
+                +displayData : string?
+            }
+
+            note right of EnrollmentResult
+                credential is null for stateless methods (e.g. JWT).
+                displayData carries secrets that must be shown
+                to the user exactly once (e.g. generated API key).
+            end note
 
             class MethodName <<value object>> {
                 +type: string
@@ -218,14 +228,22 @@ namespace Infrastructure {
 
             interface AuthenticationMethod <<port>> {
                 +methodName : MethodName
-                +serializer(): CredentialSerializer
-                +resolve(IncomingCredential): IdentityId?
-                +verify(IncomingCredential): bool
+                +authenticate(IncomingCredential): IdentityId?
+                +enroll(EnrollmentData?): EnrollmentResult
             }
+
+            note right of AuthenticationMethod
+                authenticate() handles the full flow:
+                resolve identity + verify credential.
+                Implementations are infrastructure adapters
+                and may inject CredentialRepository themselves.
+                enroll() generates any needed credentials
+                (e.g. API key) and returns what to persist
+                and what to display to the user.
+            end note
 
             class Authenticator <<domain service>> {
                 -methods : HashMap<MethodName, AuthenticationMethod>
-                -credentialsRepo : CredentialRepository
                 +authenticate(IncomingCredential): IdentityId
             }
 
@@ -236,13 +254,13 @@ namespace Infrastructure {
 
             Authenticator --o AuthenticationMethod : delegates to
             AuthenticationMethod ..> IncomingCredential : receives
-            AuthenticationMethod ..> StoredCredential : verifies against
+            AuthenticationMethod ..> StoredCredential : prepares
             AuthenticationMethod ..> IdentityId : resolves
+            AuthenticationMethod ..> EnrollmentData : receives
+            AuthenticationMethod ..> EnrollmentResult : produces
             AuthenticationMethod --* MethodName : contains
-            AuthenticationMethod --> CredentialSerializer : provides
-            CredentialSerializer ..> StoredCredential : serializes
-            CredentialSerializer ..> IncomingCredential : prepares from
-            CredentialRepository ..> CredentialSerializer : uses
+            EnrollmentResult --* StoredCredential : contains
+            EnrollmentData --* MethodName : contains
             CredentialRepository ..> CredentialId : uses
             CredentialRepository ..> IdentityId : uses
             CredentialRepository ..> MethodName : uses
@@ -251,7 +269,6 @@ namespace Infrastructure {
             IncomingCredential --* MethodName : contains
         }
     }
-
 }
 
 @enduml
