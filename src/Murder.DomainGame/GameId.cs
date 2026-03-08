@@ -1,5 +1,3 @@
 namespace Murder.DomainGame;
 
-public record struct GameId
-{
-}
+public readonly record struct GameId(string Id);

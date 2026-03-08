@@ -1,5 +1,6 @@
 namespace Murder.DomainGame;
 
-public interface GameRepository
+public class GameFactory
 {
+
 }

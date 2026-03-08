@@ -1,3 +1,9 @@
 namespace Murder.DomainGame;
 
-public record struct PlayerId { }
+public readonly record struct PlayerId(string Id)
+{
+    public override string ToString()
+    {
+        return Id;
+    }
+}
