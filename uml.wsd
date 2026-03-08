@@ -180,6 +180,18 @@ namespace Infrastructure {
                 -id : string
             }
 
+            note right of User
+                The difference between a
+                User and Guest is that
+                Users have a custom name
+                while Guest receive a
+                generated name. Also the
+                infrastructure layer may
+                assign a Guest to only a
+                single Game and only use
+                a session cookie as
+                authentication method.
+            end note
             class User <<entity>> implements Identity {
                 +state : UserState
 
@@ -233,13 +245,10 @@ namespace Infrastructure {
             }
 
             note right of AuthenticationMethod
-                authenticate() handles the full flow:
+                authenticate() handles the full authentication flow:
                 resolve identity + verify credential.
                 Implementations are infrastructure adapters
-                and may inject CredentialRepository themselves.
-                enroll() generates any needed credentials
-                (e.g. API key) and returns what to persist
-                and what to display to the user.
+                that may have injected dependencies such as the CredentialRepository.
             end note
 
             class Authenticator <<domain service>> {
@@ -250,23 +259,15 @@ namespace Infrastructure {
             User --* UserState : contains
             IdentityRepository --o Identity : stores
             Identity --* IdentityId : identified by
-            IdentityRepository ..> IdentityId : uses
-
             Authenticator --o AuthenticationMethod : delegates to
-            AuthenticationMethod ..> IncomingCredential : receives
-            AuthenticationMethod ..> StoredCredential : prepares
-            AuthenticationMethod ..> IdentityId : resolves
-            AuthenticationMethod ..> EnrollmentData : receives
-            AuthenticationMethod ..> EnrollmentResult : produces
             AuthenticationMethod --* MethodName : contains
             EnrollmentResult --* StoredCredential : contains
             EnrollmentData --* MethodName : contains
-            CredentialRepository ..> CredentialId : uses
-            CredentialRepository ..> IdentityId : uses
-            CredentialRepository ..> MethodName : uses
-            CredentialRepository ..> StoredCredential : uses
+            CredentialRepository ..> StoredCredential : stores
             StoredCredential --* MethodName : contains
             IncomingCredential --* MethodName : contains
+            EnrollmentResult --* StoredCredential : may contain
+            CredentialId --> StoredCredential : identifies
         }
     }
 }

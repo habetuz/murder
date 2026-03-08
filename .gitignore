@@ -1,4 +1,3 @@
 .direnv
-node_modules
-dist
-static/qrcode.png
+bin
+obj

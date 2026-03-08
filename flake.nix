@@ -20,29 +20,20 @@
           f {
             pkgs = import inputs.nixpkgs {
               inherit system;
-              overlays = [ inputs.self.overlays.default ];
             };
           }
         );
     in
     {
-      overlays.default = final: prev: rec {
-        nodejs = prev.nodejs;
-        yarn = (prev.yarn.override { inherit nodejs; });
-      };
-
       devShells = forEachSupportedSystem (
         { pkgs }:
         {
           default = pkgs.mkShellNoCC {
             packages = with pkgs; [
-              node2nix
-              nodejs_24
+              dotnet-sdk_10
             ];
-            
-            env = {
-              URL = "http://localhost:8080";
-            };
+
+            env = {};
           };
         }
       );
