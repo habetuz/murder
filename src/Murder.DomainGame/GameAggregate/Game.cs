@@ -4,6 +4,7 @@ public class Game
 {
     public GameId Id { get; }
     public string Name { get; set; }
+    public Visibility Visibility { get; set; } = Visibility.Private;
     public string? Description { get; set; }
     public DateTimeOffset? StartTime { get; private set; }
     public DateTimeOffset? EndTime { get; set; }
