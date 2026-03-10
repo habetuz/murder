@@ -2,9 +2,11 @@ using System.Data;
 
 namespace Murder.DomainGame.GameAggregate;
 
-internal class MurderChain()
+internal class MurderChain
 {
     private readonly LinkedList<PlayerStateMapping> _chain = new();
+
+    internal MurderChain(PlayerId[] participants) { }
 
     /// <summary>
     /// Finds the victim of a given murder and returns it.
@@ -73,7 +75,7 @@ internal class MurderChain()
 
     internal PlayerId[] Participants()
     {
-        throw new NotImplementedException();
+        return [.. _chain.Select(node => node.Player)];
     }
 
     /// <summary>
