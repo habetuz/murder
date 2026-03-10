@@ -25,15 +25,14 @@ public class Game
             return GameState.Running;
         }
     }
-    readonly MurderChain _murderChain;
+    readonly MurderChain _murderChain = new();
     readonly IDateTimeOffsetProvider _dateTimeProvider;
 
-    internal Game(GameId id, string name, PlayerId admin, MurderChain murderChain, IDateTimeOffsetProvider dateTimeProvider)
+    internal Game(GameId id, string name, PlayerId admin, IDateTimeOffsetProvider dateTimeProvider)
     {
         Id = id;
         Name = name;
         Admin = admin;
-        _murderChain = murderChain;
         _dateTimeProvider = dateTimeProvider;
     }
 

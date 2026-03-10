@@ -30,10 +30,12 @@
         {
           default = pkgs.mkShellNoCC {
             packages = with pkgs; [
-              dotnet-sdk_10
+              dotnetCorePackages.dotnet_10.sdk
             ];
 
-            env = {};
+            env = {
+              DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
+            };
           };
         }
       );
