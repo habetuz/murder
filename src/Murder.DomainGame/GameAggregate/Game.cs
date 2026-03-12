@@ -29,13 +29,15 @@ public class Game
     MurderChain? _murderChain;
     List<PlayerId>? _tmpParticipants;
     readonly IDateTimeOffsetProvider _dateTimeProvider;
+    readonly IShuffleParticipants _participantShuffler;
 
-    internal Game(GameId id, string name, PlayerId admin, IDateTimeOffsetProvider dateTimeProvider)
+    internal Game(GameId id, string name, PlayerId admin, IDateTimeOffsetProvider dateTimeProvider, IShuffleParticipants participantsShuffler)
     {
         Id = id;
         Name = name;
         Admin = admin;
         _dateTimeProvider = dateTimeProvider;
+        _participantShuffler = participantsShuffler;
         _tmpParticipants = [admin];
     }
 
@@ -126,7 +128,7 @@ public class Game
         }
 
         StartTime = _dateTimeProvider.Now;
-        _murderChain = new([.. _tmpParticipants!]);
+        _murderChain = new([.. _tmpParticipants!], _participantShuffler);
         _tmpParticipants = null;
     }
 

@@ -35,6 +35,7 @@
 
             env = {
               DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
+              DOTNET_ROOT=pkgs.dotnetCorePackages.dotnet_10.sdk + "/share/dotnet";
             };
           };
         }

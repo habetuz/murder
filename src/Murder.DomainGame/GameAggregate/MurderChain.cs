@@ -4,9 +4,14 @@ namespace Murder.DomainGame.GameAggregate;
 
 internal class MurderChain
 {
-    private readonly LinkedList<PlayerStateMapping> _chain = new();
+    private readonly LinkedList<PlayerStateMapping> _chain;
 
-    internal MurderChain(PlayerId[] participants) { }
+    internal MurderChain(PlayerId[] participants, IShuffleParticipants participantsShuffler)
+    {
+        participantsShuffler.Shuffle(participants);
+
+        _chain = new(participants.Select(player => new PlayerStateMapping(player)));
+    }
 
     /// <summary>
     /// Finds the victim of a given murder and returns it.
@@ -96,10 +101,11 @@ internal class MurderChain
             throw new PlayerDeadException(murder);
         }
 
-        LinkedListNode<PlayerStateMapping>? victim;
+        LinkedListNode<PlayerStateMapping>? victim = murderNode;
+
         do
         {
-            victim = murderNode.Next;
+            victim = victim.Next;
             victim ??= _chain.First!; // Chain has more than 1 value here
         } while (victim.Value.State is PlayerState.Dead && victim.Value.Player != murder);
 
