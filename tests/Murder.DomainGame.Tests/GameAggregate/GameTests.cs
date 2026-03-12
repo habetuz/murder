@@ -7,7 +7,8 @@ public class GameTests
 {
     private static readonly GameId TestGameId = new("game-1");
     private static readonly PlayerId AdminId = new("player-admin");
-    private static readonly IShuffleParticipants participantsShuffler = new FakeShuffleParticipants();
+    private static readonly IShuffleParticipants participantsShuffler =
+        new FakeShuffleParticipants();
 
     // ── State tests ──────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ public class GameTests
 
         game.Join(PlayerB);
 
-        Assert.Contains(PlayerB, game.Participants());
+        Assert.Contains(PlayerB, game.Participants);
     }
 
     [Fact]

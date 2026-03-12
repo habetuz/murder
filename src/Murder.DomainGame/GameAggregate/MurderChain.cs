@@ -6,6 +6,11 @@ internal class MurderChain
 {
     private readonly LinkedList<PlayerStateMapping> _chain;
 
+    internal PlayerId[] Participants
+    {
+        get => [.. _chain.Select(node => node.Player)];
+    }
+
     internal MurderChain(PlayerId[] participants, IShuffleParticipants participantsShuffler)
     {
         participantsShuffler.Shuffle(participants);
@@ -76,11 +81,6 @@ internal class MurderChain
         return new(
             _chain.Select(node => new KeyValuePair<PlayerId, uint>(node.Player, node.Kills))
         );
-    }
-
-    internal PlayerId[] Participants()
-    {
-        return [.. _chain.Select(node => node.Player)];
     }
 
     /// <summary>

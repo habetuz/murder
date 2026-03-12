@@ -1,13 +1,13 @@
 namespace Murder.DomainGame.GameAggregate;
 
-public class Game
+public class Game : IReadOnlyGame
 {
     public GameId Id { get; }
     public string Name { get; set; }
     public Visibility Visibility { get; set; } = Visibility.Private;
     public string? Description { get; set; }
     public DateTimeOffset? StartTime { get; private set; }
-    public DateTimeOffset? EndTime { get; set; }
+    public DateTimeOffset? EndTime { get; private set; }
     public PlayerId? Admin { get; private set; }
     public GameState State
     {
@@ -26,12 +26,30 @@ public class Game
             return GameState.Running;
         }
     }
+
+    public PlayerId[] Participants
+    {
+        get =>
+            State switch
+            {
+                GameState.Pending => [.. _tmpParticipants!],
+                GameState.Running or GameState.Ended => _murderChain!.Participants,
+                _ => throw new NotImplementedException(),
+            };
+    }
+
     MurderChain? _murderChain;
     List<PlayerId>? _tmpParticipants;
     readonly IDateTimeOffsetProvider _dateTimeProvider;
     readonly IShuffleParticipants _participantShuffler;
 
-    internal Game(GameId id, string name, PlayerId admin, IDateTimeOffsetProvider dateTimeProvider, IShuffleParticipants participantsShuffler)
+    internal Game(
+        GameId id,
+        string name,
+        PlayerId admin,
+        IDateTimeOffsetProvider dateTimeProvider,
+        IShuffleParticipants participantsShuffler
+    )
     {
         Id = id;
         Name = name;
@@ -110,16 +128,6 @@ public class Game
         return _murderChain!.Leaderboard();
     }
 
-    public PlayerId[] Participants()
-    {
-        return State switch
-        {
-            GameState.Pending => [.. _tmpParticipants!],
-            GameState.Running or GameState.Ended => _murderChain!.Participants(),
-            _ => throw new NotImplementedException(),
-        };
-    }
-
     public void Start()
     {
         if (State is not GameState.Pending)
@@ -128,6 +136,13 @@ public class Game
         }
 
         StartTime = _dateTimeProvider.Now;
+
+        // Unsert end time if it is invalid
+        if (EndTime < StartTime)
+        {
+            EndTime = null;
+        }
+
         _murderChain = new([.. _tmpParticipants!], _participantShuffler);
         _tmpParticipants = null;
     }
@@ -135,5 +150,28 @@ public class Game
     public void End()
     {
         EndTime = _dateTimeProvider.Now;
+    }
+
+    public void SetEnd(DateTimeOffset end)
+    {
+        if (State is GameState.Ended)
+        {
+            throw new UnexpectedGameStateException(GameState.Running, GameState.Ended);
+        }
+
+        // Clamp end time to not be before start time
+        if (end < StartTime)
+        {
+            EndTime = StartTime;
+        }
+        else
+        {
+            EndTime = end;
+        }
+    }
+
+    public void SetEnd(DateTimeOffset? end)
+    {
+        throw new NotImplementedException();
     }
 }

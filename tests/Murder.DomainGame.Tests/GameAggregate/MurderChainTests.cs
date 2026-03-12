@@ -8,7 +8,8 @@ public class MurderChainTests
     private static readonly PlayerId PlayerA = new("player-a");
     private static readonly PlayerId PlayerB = new("player-b");
     private static readonly PlayerId PlayerC = new("player-c");
-    private static readonly IShuffleParticipants participantsShuffler = new FakeShuffleParticipants();
+    private static readonly IShuffleParticipants participantsShuffler =
+        new FakeShuffleParticipants();
 
     // ── Victim ────────────────────────────────────────────────────────────────
 

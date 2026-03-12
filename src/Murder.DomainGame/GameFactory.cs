@@ -8,9 +8,12 @@ public class GameFactory(IGameIdGenerator gameIdGenerator)
     readonly IDateTimeOffsetProvider _dateTimeOffsetProvider = new SystemDateTimeOffsetProvider();
     readonly IShuffleParticipants _participantsShuffler = new RandomShuffleParticipants();
 
-    public Game CreateGame(string name, PlayerId admin)
+    public Game CreateGame(string name, PlayerId admin, Visibility visibility = Visibility.Private)
     {
         GameId id = _gameIdGenerator.GenerateUnique();
-        return new Game(id, name, admin, _dateTimeOffsetProvider, _participantsShuffler);
+        return new Game(id, name, admin, _dateTimeOffsetProvider, _participantsShuffler)
+        {
+            Visibility = visibility,
+        };
     }
 }
