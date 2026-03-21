@@ -4,8 +4,8 @@ public class User(IdentityId id, string name) : Identity(id, name)
 {
     public UserState State { get; private set; } = UserState.Active;
 
-    public void Delete()
+    public void Deactivate()
     {
-        State = UserState.Deleted;
+        State = UserState.Deactivated;
     }
 }
