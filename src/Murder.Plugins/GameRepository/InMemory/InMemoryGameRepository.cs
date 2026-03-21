@@ -67,15 +67,21 @@ public class InMemoryGameRepository(
 
     public void Store(Game game)
     {
+        if (_games.ContainsKey(game.Id))
+        {
+            throw new ArgumentException($"Game with ID {game.Id} already exists");
+        }
+
+        _games[game.Id] = game;
     }
 
     public void Update(Game game)
     {
-        throw new NotImplementedException();
-    }
+        if (!_games.ContainsKey(game.Id))
+        {
+            throw new ArgumentException($"Game with ID {game.Id} does not exist");
+        }
 
-    public void Upsert(Game game)
-    {
-        throw new NotImplementedException();
+        _games[game.Id] = game;
     }
 }
