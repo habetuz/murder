@@ -1,7 +1,10 @@
 namespace Murder.DomainGame.GameAggregate;
 
-public class UnexpectedGameStateException(GameState expected, GameState actual) : Exception
+public sealed class UnexpectedGameStateException(GameState expected, GameState actual)
+    : Exception(
+        $"Function only available in game state '{expected}', but current state is '{actual}'."
+    )
 {
-    public override string Message =>
-        $"Function only available in game state {expected}, but current state is {actual}";
+    public GameState Expected { get; } = expected;
+    public GameState Actual { get; } = actual;
 }

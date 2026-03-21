@@ -1,5 +1,3 @@
 namespace Murder.DomainIdentity;
 
-public interface IAuthenticationMethodKey
-{
-}
+public interface IAuthenticationMethodKey { }

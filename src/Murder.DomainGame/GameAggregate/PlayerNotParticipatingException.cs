@@ -1,6 +1,7 @@
 namespace Murder.DomainGame.GameAggregate;
 
-public class PlayerNotParticipating(PlayerId player) : Exception
+public sealed class PlayerNotParticipating(PlayerId player)
+    : Exception($"Player '{player}' is not participating in this game.")
 {
-    public override string Message => $"Player {player} is not participating at this game";
+    public PlayerId Player { get; } = player;
 }
