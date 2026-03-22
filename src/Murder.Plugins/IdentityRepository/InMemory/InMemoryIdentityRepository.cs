@@ -25,7 +25,23 @@ public class InMemoryIdentityRepository : IIdentityRepository, IIdentityIdGenera
 
     public IdentityId IdentityOfName(string name)
     {
-        throw new NotImplementedException();
+        var matches = _identities
+            .Where(pair => string.Equals(pair.Value.Name, name, StringComparison.OrdinalIgnoreCase))
+            .Select(pair => pair.Key)
+            .Take(2)
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            throw new KeyNotFoundException($"No identity found with name '{name}'.");
+        }
+
+        if (matches.Length > 1)
+        {
+            throw new InvalidOperationException($"Multiple identities found with name '{name}'.");
+        }
+
+        return matches[0];
     }
 
     public void Store(Identity identity)

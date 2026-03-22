@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Murder.ApplicationGame\Murder.ApplicationGame.csproj" />
+    <ProjectReference Include="..\..\Murder.ApplicationIdentity\Murder.ApplicationIdentity.csproj" />
+    <ProjectReference Include="..\..\Murder.DomainGame\Murder.DomainGame.csproj" />
+    <ProjectReference Include="..\..\Murder.DomainIdentity\Murder.DomainIdentity.csproj" />
+    <ProjectReference Include="..\AuthenticationMethod\Password\Murder.Plugins.AuthenticationMethod.Password.csproj" />
+    <ProjectReference Include="..\AuthenticationMethod\SessionToken\Murder.Plugins.AuthenticationMethod.SessionToken.csproj" />
+    <ProjectReference Include="..\CredentialRepository\InMemory\Murder.Plugins.CredentialRepository.InMemory.csproj" />
+    <ProjectReference Include="..\GameRepository\InMemory\Murder.Plugins.GameRepositoy.InMemory.csproj" />
+    <ProjectReference Include="..\IdentityRepository\InMemory\Murder.Plugins.IdentityRepository.InMemory.csproj" />
+  </ItemGroup>
+
+</Project>

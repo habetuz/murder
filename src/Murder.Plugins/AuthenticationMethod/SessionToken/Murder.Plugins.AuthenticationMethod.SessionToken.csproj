@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Murder.DomainIdentity\Murder.DomainIdentity.csproj" />
   </ItemGroup>
@@ -8,4 +9,5 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
 </Project>

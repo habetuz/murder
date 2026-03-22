@@ -1,7 +1,7 @@
 using Murder.DomainGame;
 using Murder.DomainGame.GameAggregate;
 
-namespace Murder.Plugins.GameRepository.InMemory;
+namespace Murder.Plugins.GameRepositoy.InMemory;
 
 public class InMemoryGameRepository(
     uint idLength = 5,
