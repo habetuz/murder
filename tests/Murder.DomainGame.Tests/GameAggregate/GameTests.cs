@@ -56,8 +56,8 @@ public class GameTests
         var clock = new FakeDateTimeOffsetProvider { Now = now };
         var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
 
+        game.SetEnd(now.AddHours(1));
         game.Start();
-        game.EndTime = now.AddHours(1);
 
         Assert.Equal(GameState.Running, game.State);
     }
@@ -70,7 +70,7 @@ public class GameTests
         var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
 
         game.Start();
-        game.EndTime = now.AddHours(-1); // end time is in the past
+        game.SetEnd(now.AddHours(-1));
 
         Assert.Equal(GameState.Ended, game.State);
     }

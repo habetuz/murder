@@ -49,6 +49,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<ProblemDetailsExceptionMiddleware>();
+
 app.Use(async (context, next) =>
 {
     var sessionToken = context.Request.Cookies[AuthenticationCookieNames.SessionToken];
@@ -66,21 +68,7 @@ app.Use(async (context, next) =>
             if (identityId is not null)
             {
                 context.Items[AuthenticationHttpContextItems.CurrentIdentityId] = identityId.Value;
-                context.Response.Cookies.Append(
-                    AuthenticationCookieNames.SessionToken,
-                    sessionToken,
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = context.Request.IsHttps,
-                        SameSite = SameSiteMode.Strict,
-                        Expires = DateTimeOffset.UtcNow.Add(
-                            AuthenticationSettings.SessionTokenLifetime
-                        ),
-                        IsEssential = true,
-                        Path = "/",
-                    }
-                );
+                SessionCookie.Append(context.Response, context.Request, sessionToken);
             }
         }
         catch (UnauthorizedAccessException)
