@@ -15,6 +15,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 builder.Services.AddSingleton<IIdentityRepository, InMemoryIdentityRepository>();
 builder.Services.AddSingleton<ICredentialRepository, InMemoryCredentialRepository>();
@@ -50,6 +61,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ProblemDetailsExceptionMiddleware>();
+app.UseCors("Frontend");
 
 app.Use(async (context, next) =>
 {

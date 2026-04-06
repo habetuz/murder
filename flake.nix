@@ -31,6 +31,7 @@
           default = pkgs.mkShellNoCC {
             packages = with pkgs; [
               dotnetCorePackages.dotnet_10.sdk
+              bun
             ];
 
             env = {
