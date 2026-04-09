@@ -1,14 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
 :root {
-  --paper: #f7efde;
-  --paper-2: #f0e2c8;
-  --ink: #2a1a12;
-  --ink-soft: #5f4131;
-  --line: rgba(64, 41, 30, 0.26);
-  --accent: #9e3f27;
-  --accent-soft: #c9805f;
-  --ok: #244b2f;
+  --bg: #f4f6ff;
+  --ink: #111827;
+  --muted: #4b5563;
+  --line: #dbe3ff;
+
+  --brand: #2563eb;
+  --brand-strong: #1d4ed8;
+  --brand-soft: #e7f0ff;
+
+  --secondary: #0ea5a4;
+  --secondary-strong: #0b8e8e;
+
+  --warn: #f59e0b;
+  --warn-strong: #d97706;
+
+  --danger: #ef4444;
+  --danger-strong: #dc2626;
+
+  --ok: #16a34a;
+
+  --panel: #ffffff;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 14px 30px rgba(37, 99, 235, 0.12);
 }
 
 * {
@@ -23,46 +39,133 @@ body,
 }
 
 body {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
   color: var(--ink);
-  background: var(--paper);
-  font-family: 'Source Sans 3', 'Trebuchet MS', sans-serif;
+  background: var(--bg);
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   margin: 0;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Fredoka', 'Nunito', sans-serif;
   letter-spacing: 0.01em;
 }
 
 p {
+  margin: 0;
   line-height: 1.45;
 }
 
-.p-card {
-  border-radius: 1rem;
+a {
+  color: var(--brand-strong);
+}
+
+.panel {
   border: 1px solid var(--line);
-  background: rgba(252, 247, 236, 0.84);
-  backdrop-filter: blur(1px);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 1rem;
 }
 
-.p-card .p-card-title {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.55rem;
+.panel h2 {
+  font-size: 1.35rem;
 }
 
-.p-button {
-  min-height: 2.6rem;
+.game-button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.72rem 1.1rem;
+  font: 700 0.95rem 'Fredoka', sans-serif;
+  min-height: 2.7rem;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
 }
 
-.p-inputtext,
-.p-password-input {
-  border-radius: 0.65rem;
+.game-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
 }
 
-@media (max-width: 700px) {
-  .p-card .p-card-content {
-    padding: 0.75rem;
+.game-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.game-button.primary {
+  background: linear-gradient(135deg, var(--brand), var(--secondary));
+  color: #fff;
+}
+
+.game-button.secondary {
+  background: linear-gradient(135deg, #c7d8ff, #d7fff7);
+  color: #17326e;
+}
+
+.game-button.warn {
+  background: linear-gradient(135deg, var(--warn), #fbbf24);
+  color: #fff;
+}
+
+.game-button.danger {
+  background: linear-gradient(135deg, var(--danger), #f87171);
+  color: #fff;
+}
+
+.game-button.ghost {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.text-input {
+  width: 100%;
+  border: 1px solid #c8d8ff;
+  border-radius: var(--radius-sm);
+  padding: 0.68rem 0.72rem;
+  font: 600 0.96rem 'Nunito', sans-serif;
+  background: #fff;
+}
+
+.text-input:focus {
+  outline: 2px solid #b6ccff;
+  border-color: #8bb1ff;
+}
+
+.status-message {
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.85rem;
+  font-weight: 700;
+}
+
+.status-message.error {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.status-message.success {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.badge-chip {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font: 700 0.78rem 'Fredoka', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+@media (max-width: 760px) {
+  .panel {
+    padding: 0.85rem;
+    border-radius: 14px;
   }
 }

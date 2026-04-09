@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import Card from 'primevue/card';
-import Button from 'primevue/button';
-import Password from 'primevue/password';
-import Message from 'primevue/message';
 import { useAuthStore } from '../stores/auth';
 import { useGamesStore } from '../stores/games';
 import { ApiError, type CredentialDto } from '../types/api';
@@ -78,36 +74,32 @@ async function revokeSessions() {
       <p class="lead">Manage account credentials and sessions.</p>
     </section>
 
-    <Message v-if="errorText" severity="error" :closable="false">{{ errorText }}</Message>
-    <Message v-if="successText" severity="success" :closable="false">{{ successText }}</Message>
+    <p v-if="errorText" class="status-message error">{{ errorText }}</p>
+    <p v-if="successText" class="status-message success">{{ successText }}</p>
 
     <section class="grid">
-      <Card>
-        <template #title>Password</template>
-        <template #content>
-          <div class="stack">
-            <Password v-model="password" :feedback="false" toggleMask class="full" placeholder="New password" />
-            <Button label="Save password" :loading="loading" @click="savePassword" />
-          </div>
-        </template>
-      </Card>
+      <section class="panel">
+        <h2>Password</h2>
+        <div class="stack">
+          <input v-model="password" class="text-input" type="password" placeholder="New password" />
+          <button class="game-button primary" :disabled="loading" @click="savePassword">Save password</button>
+        </div>
+      </section>
 
-      <Card>
-        <template #title>Credentials</template>
-        <template #content>
-          <ul class="credentials">
-            <li v-for="credential in credentials" :key="credential.id">
-              <div>
-                <strong>{{ credential.type }}</strong>
-                <p>{{ credential.id }}</p>
-              </div>
-              <Button label="Revoke" text severity="danger" @click="revoke(credential.id)" :loading="loading" />
-            </li>
-            <li v-if="!credentials.length" class="muted">No credentials found.</li>
-          </ul>
-          <Button label="Revoke all sessions" severity="contrast" outlined @click="revokeSessions" :loading="loading" />
-        </template>
-      </Card>
+      <section class="panel">
+        <h2>Credentials</h2>
+        <ul class="credentials">
+          <li v-for="credential in credentials" :key="credential.id">
+            <div>
+              <strong>{{ credential.type }}</strong>
+              <p>{{ credential.id }}</p>
+            </div>
+            <button class="game-button danger compact" :disabled="loading" @click="revoke(credential.id)">Revoke</button>
+          </li>
+          <li v-if="!credentials.length" class="muted">No credentials found.</li>
+        </ul>
+        <button class="game-button ghost" :disabled="loading" @click="revokeSessions">Revoke all sessions</button>
+      </section>
     </section>
   </main>
 </template>
@@ -123,7 +115,8 @@ async function revokeSessions() {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.76rem;
-  color: #7e5f45;
+  color: #3b82f6;
+  font-weight: 800;
 }
 
 h1 {
@@ -132,7 +125,7 @@ h1 {
 
 .lead {
   margin: 0;
-  color: #553826;
+  color: #4b5563;
 }
 
 .grid {
@@ -155,10 +148,10 @@ h1 {
 }
 
 .credentials li {
-  border: 1px solid rgba(70, 46, 31, 0.2);
-  border-radius: 0.65rem;
+  border: 1px solid #dbeafe;
+  border-radius: 0.75rem;
   padding: 0.55rem 0.65rem;
-  background: rgba(252, 246, 236, 0.6);
+  background: linear-gradient(135deg, #ffffff, #f5f9ff);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -167,16 +160,16 @@ h1 {
 
 .credentials p {
   margin: 0;
-  color: #6f4c38;
+  color: #475569;
   font-size: 0.84rem;
 }
 
-.full,
-:deep(.full input) {
-  width: 100%;
+.muted {
+  color: #64748b;
 }
 
-.muted {
-  color: #6f4c38;
+.compact {
+  padding: 0.4rem 0.65rem;
+  min-height: 0;
 }
 </style>

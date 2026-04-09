@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import Button from 'primevue/button';
 import { useAuthStore } from '../../stores/auth';
 
 const auth = useAuthStore();
@@ -25,22 +24,12 @@ async function onLogout() {
     </button>
 
     <nav class="actions">
-      <Button
-        v-if="auth.isUser"
-        label="Settings"
-        size="small"
-        severity="contrast"
-        outlined
-        @click="router.push({ name: 'settings' })"
-      />
-      <Button
-        v-if="auth.isAuthenticated"
-        label="Logout"
-        size="small"
-        severity="danger"
-        text
-        @click="onLogout"
-      />
+      <button v-if="auth.isUser" class="game-button secondary nav-btn" @click="router.push({ name: 'settings' })">
+        Settings
+      </button>
+      <button v-if="auth.isAuthenticated" class="game-button ghost nav-btn" @click="onLogout">
+        Logout
+      </button>
       <div v-if="auth.isAuthenticated" class="avatar" :title="auth.player?.name">
         {{ initials }}
       </div>
@@ -53,9 +42,9 @@ async function onLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid rgba(80, 56, 42, 0.24);
-  background: linear-gradient(120deg, rgba(26, 16, 14, 0.96), rgba(63, 34, 24, 0.96));
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(77, 119, 219, 0.22);
+  background: linear-gradient(120deg, rgba(18, 28, 60, 0.96), rgba(25, 52, 110, 0.94));
   position: sticky;
   top: 0;
   z-index: 20;
@@ -64,7 +53,7 @@ async function onLogout() {
 .brand {
   border: none;
   background: transparent;
-  color: #f9eddd;
+  color: #eff6ff;
   display: flex;
   gap: 0.7rem;
   align-items: center;
@@ -78,7 +67,7 @@ async function onLogout() {
 }
 
 .brand small {
-  color: #dec7ae;
+  color: #bae6fd;
 }
 
 .brand-mark {
@@ -89,8 +78,8 @@ async function onLogout() {
   place-items: center;
   font-weight: 700;
   font-size: 1.1rem;
-  background: linear-gradient(160deg, #f8e9cd, #a9805a);
-  color: #23110c;
+  background: linear-gradient(160deg, #fde68a, #f59e0b);
+  color: #2a1800;
 }
 
 .actions {
@@ -99,15 +88,27 @@ async function onLogout() {
   gap: 0.35rem;
 }
 
+.nav-btn {
+  min-height: 2.2rem;
+  padding: 0.48rem 0.9rem;
+  font-size: 0.84rem;
+}
+
 .avatar {
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: #f6e8cf;
-  color: #2d160f;
+  background: #dbeafe;
+  color: #0f2e73;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .brand small {
+    display: none;
+  }
 }
 </style>

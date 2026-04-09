@@ -23,15 +23,16 @@ onMounted(async () => {
 .app-shell {
   min-height: 100dvh;
   background:
-    radial-gradient(120% 90% at 95% 5%, rgba(170, 132, 90, 0.25), transparent 45%),
-    radial-gradient(100% 120% at 0% 0%, rgba(94, 56, 38, 0.2), transparent 50%),
-    linear-gradient(180deg, #f6efdf 0%, #f2e6d1 100%);
+    radial-gradient(45% 35% at 0% 0%, rgba(14, 165, 164, 0.2), transparent 60%),
+    radial-gradient(40% 30% at 100% 0%, rgba(37, 99, 235, 0.18), transparent 65%),
+    radial-gradient(60% 50% at 50% 100%, rgba(245, 158, 11, 0.12), transparent 65%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
 }
 
 .page-shell {
   width: min(1120px, 100% - 1.5rem);
   margin: 0 auto;
-  padding: 1rem 0 2rem;
+  padding: 1rem 0 2.2rem;
 }
 
 @media (max-width: 700px) {
