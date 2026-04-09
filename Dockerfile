@@ -5,7 +5,7 @@ COPY frontend/package.json frontend/bun.lock* ./
 RUN bun install --frozen-lockfile
 COPY frontend/ .
 ENV VITE_API_BASE_URL=""
-RUN bun run build
+RUN bun run vite build
 
 # Stage 2: Build backend
 FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS backend-build
