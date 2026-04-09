@@ -114,9 +114,15 @@ export interface VictimResponse {
 }
 
 export interface KillResponse {
-  nextVictimPlayerId: string | null
-  nextVictimName: string | null
-  gameEnded: boolean
+  status: 'pending'
+}
+
+export interface KillRespondRequest {
+  accepted: boolean
+}
+
+export interface KillRespondResponse {
+  result: 'confirmed' | 'denied'
 }
 
 export interface LeaderboardResponse {
@@ -133,4 +139,21 @@ export interface ProblemDetails {
   status?: number
   detail?: string
   instance?: string
+}
+
+// Watch (SSE) types
+
+export interface WatchPlayerState {
+  victimPlayerId: string | null
+  victimName: string | null
+  alive: boolean
+  pendingKill: boolean
+  pendingKillSent: boolean
+}
+
+export interface WatchPayload {
+  game: GameDto
+  participants: ParticipantDto[]
+  leaderboard: LeaderboardEntry[] | null
+  me: WatchPlayerState
 }

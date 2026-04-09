@@ -14,7 +14,8 @@ namespace Murder.Plugins.WebAPI.Controllers;
 public sealed class WatchController(
     GameService gameService,
     IdentityService identityService,
-    GameEventBus eventBus
+    GameEventBus eventBus,
+    PendingKillStore pendingKillStore
 ) : ApiControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -178,10 +179,14 @@ public sealed class WatchController(
                 victimPlayerId = (string?)null,
                 victimName = (string?)null,
                 alive = game.State == GameState.Pending || !IsPlayerDead(gameId, playerId),
+                pendingKill = false,
+                pendingKillSent = false,
             };
         }
 
         var names = gameService.ParticipantNames(gameId);
+        var hasPendingKillAsVictim = pendingKillStore.HasPendingKillAsVictim(gameId, playerId);
+        var hasPendingKillAsKiller = pendingKillStore.GetForKiller(gameId, playerId) is not null;
 
         // Running state — try to get victim
         try
@@ -192,6 +197,8 @@ public sealed class WatchController(
                 victimPlayerId = (string?)victimId.Id,
                 victimName = (string?)names[victimId],
                 alive = true,
+                pendingKill = hasPendingKillAsVictim,
+                pendingKillSent = hasPendingKillAsKiller,
             };
         }
         catch (PlayerDeadException)
@@ -201,6 +208,8 @@ public sealed class WatchController(
                 victimPlayerId = (string?)null,
                 victimName = (string?)null,
                 alive = false,
+                pendingKill = false,
+                pendingKillSent = false,
             };
         }
         catch (NoMoreVictimsException)
@@ -210,6 +219,8 @@ public sealed class WatchController(
                 victimPlayerId = (string?)null,
                 victimName = (string?)null,
                 alive = true,
+                pendingKill = false,
+                pendingKillSent = false,
             };
         }
     }

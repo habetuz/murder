@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const player = ref<PlayerRef | null>(null)
   const sessionExpiresAt = ref<string | null>(null)
   const flashMessage = ref<string | null>(null)
+  const guestGameId = ref<string | null>(null)
 
   const isAuthenticated = computed(() => player.value !== null)
   const isUser = computed(() => player.value?.kind === 'user')
@@ -21,6 +22,10 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await api.getSession()
       player.value = res.player
       sessionExpiresAt.value = res.session.expiresAt
+      if (res.player.kind === 'guest') {
+        const gamesRes = await api.getMyGames()
+        guestGameId.value = gamesRes.games[0] ?? null
+      }
     } catch {
       player.value = null
       sessionExpiresAt.value = null
@@ -61,6 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
       const session = await api.getSession()
       player.value = session.player
       sessionExpiresAt.value = session.session.expiresAt
+      guestGameId.value = res.joinedGameId
       return res.joinedGameId
     } finally {
       loading.value = false
@@ -80,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearAuthState() {
     player.value = null
     sessionExpiresAt.value = null
+    guestGameId.value = null
     initialized.value = false
   }
 
@@ -100,6 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isUser,
     isGuest,
+    guestGameId,
     bootstrap,
     login,
     register,

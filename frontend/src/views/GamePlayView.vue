@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { ApiError } from '../api/client'
 import VictimReveal from '../components/game/VictimReveal.vue'
 import KillConfirmButton from '../components/game/KillConfirmButton.vue'
+import PendingKillBanner from '../components/game/PendingKillBanner.vue'
 import LeaderboardTable from '../components/game/LeaderboardTable.vue'
 import CountdownTimer from '../components/game/CountdownTimer.vue'
 import AdminControls from '../components/game/AdminControls.vue'
@@ -16,6 +17,8 @@ const auth = useAuthStore()
 
 const killError = ref<string | null>(null)
 const killLoading = ref(false)
+const respondLoading = ref(false)
+const respondError = ref<string | null>(null)
 
 async function handleKill(victimId: string) {
   killLoading.value = true
@@ -26,6 +29,18 @@ async function handleKill(victimId: string) {
     killError.value = e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Kill failed'
   } finally {
     killLoading.value = false
+  }
+}
+
+async function handleRespondToKill(accepted: boolean) {
+  respondLoading.value = true
+  respondError.value = null
+  try {
+    await gameStore.respondToKill(gameStore.currentGame!.id, accepted)
+  } catch (e) {
+    respondError.value = e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Response failed'
+  } finally {
+    respondLoading.value = false
   }
 }
 </script>
@@ -41,7 +56,7 @@ async function handleKill(victimId: string) {
     <!-- Dead state -->
     <template v-if="gameStore.isDead">
       <PixelCard variant="danger" class="w-full text-center py-6">
-        <p class="font-pixel text-murder-danger text-lg mb-2">☠</p>
+        <p class="font-pixel text-murder-danger text-lg mb-2">&#9760;</p>
         <p class="font-pixel text-[10px] text-murder-danger">YOU HAVE BEEN</p>
         <p class="font-pixel text-[10px] text-murder-danger">ELIMINATED</p>
         <p class="font-body text-murder-dim text-xs mt-3">Sit back and watch the carnage.</p>
@@ -50,6 +65,14 @@ async function handleKill(victimId: string) {
 
     <!-- Alive state -->
     <template v-else>
+      <!-- Pending kill banner for victim -->
+      <PendingKillBanner
+        v-if="gameStore.pendingKill"
+        :loading="respondLoading"
+        :error="respondError"
+        @respond="handleRespondToKill"
+      />
+
       <PixelCard variant="accent" class="w-full">
         <VictimReveal
           :victim-name="gameStore.currentVictimName"
@@ -60,7 +83,15 @@ async function handleKill(victimId: string) {
 
       <ErrorBanner :message="killError" />
 
+      <!-- Killer: waiting for victim confirmation -->
+      <PixelCard v-if="gameStore.pendingKillSent" variant="default" class="w-full text-center py-4">
+        <p class="font-pixel text-[9px] text-murder-warn mb-1">KILL PENDING</p>
+        <p class="font-body text-murder-dim text-xs">Waiting for your victim to confirm the kill...</p>
+      </PixelCard>
+
+      <!-- Normal kill button (hidden while a kill is pending) -->
       <KillConfirmButton
+        v-if="!gameStore.pendingKillSent"
         :victim-name="gameStore.currentVictimName"
         :victim-id="gameStore.currentVictimId"
         :disabled="killLoading || !gameStore.currentVictimId"

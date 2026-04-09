@@ -106,6 +106,10 @@ public class GameService(IGameRepository gameRepository)
     {
         var gameEntity = _repository.FindGameById(game) ?? throw new GameNotFoundException(game);
         var nextVictim = gameEntity.Kill(murder, victim);
+        if (nextVictim is null)
+        {
+            gameEntity.End();
+        }
         _repository.Update(gameEntity);
         return nextVictim;
     }

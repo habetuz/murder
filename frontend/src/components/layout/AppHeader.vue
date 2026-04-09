@@ -19,17 +19,13 @@ async function logout() {
         MURDER
       </RouterLink>
 
-      <div v-if="auth.isAuthenticated" class="flex items-center gap-3">
+      <div v-if="auth.isUser" class="flex items-center gap-3">
         <RouterLink
-          v-if="auth.isUser"
           to="/settings"
           class="font-pixel text-[7px] text-murder-dim hover:text-murder-text transition-colors no-underline"
         >
           {{ auth.player?.name }}
         </RouterLink>
-        <span v-else class="font-pixel text-[7px] text-murder-dim">
-          GUEST
-        </span>
         <PixelButton variant="ghost" size="sm" @click="logout">
           QUIT
         </PixelButton>

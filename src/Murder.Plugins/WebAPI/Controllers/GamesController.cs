@@ -13,13 +13,15 @@ public sealed class GamesController(
     GameService gameService,
     IdentityService identityService,
     AuthenticationService authenticationService,
-    GameEventBus eventBus
+    GameEventBus eventBus,
+    PendingKillStore pendingKillStore
 ) : ApiControllerBase
 {
     private readonly GameService _gameService = gameService;
     private readonly IdentityService _identityService = identityService;
     private readonly AuthenticationService _authenticationService = authenticationService;
     private readonly GameEventBus _eventBus = eventBus;
+    private readonly PendingKillStore _pendingKillStore = pendingKillStore;
 
     [HttpPost("/games")]
     public IActionResult CreateGame([FromBody] CreateGameRequest request)
@@ -27,6 +29,11 @@ public sealed class GamesController(
         if (!TryGetCurrentIdentity(out var identityId))
         {
             return UnauthorizedProblem();
+        }
+
+        if (_identityService.IsGuest(identityId))
+        {
+            return ForbiddenProblem("Guests cannot create games.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Name))
@@ -357,22 +364,62 @@ public sealed class GamesController(
             return ForbiddenProblem("You are not participating in this game.");
         }
 
-        var nextVictim = _gameService.Kill(id, playerId, new PlayerId(request.VictimPlayerId));
-        _eventBus.Notify(id);
-        string? nextVictimName = null;
-        if (nextVictim is not null)
+        // Validate the kill is correct (right victim, player alive, game running)
+        // This calls Victim() which checks all preconditions
+        var correctVictim = _gameService.Victim(id, playerId);
+        if (correctVictim != new PlayerId(request.VictimPlayerId))
         {
-            var names = _gameService.ParticipantNames(id);
-            nextVictimName = names[nextVictim.Value];
+            return ValidationProblemResult("Incorrect victim.");
         }
-        return Ok(
-            new
-            {
-                nextVictimPlayerId = nextVictim?.Id,
-                nextVictimName,
-                gameEnded = nextVictim is null,
-            }
-        );
+
+        // Create a pending kill — don't execute yet
+        _pendingKillStore.Add(id, playerId, correctVictim);
+        _eventBus.Notify(id);
+
+        return Ok(new { status = "pending" });
+    }
+
+    [HttpPost("/games/{gameId}/kills/respond")]
+    public IActionResult RespondToKill(string gameId, [FromBody] KillRespondRequest request)
+    {
+        if (!TryGetCurrentIdentity(out var identityId))
+        {
+            return UnauthorizedProblem();
+        }
+
+        var id = ToGameId(gameId);
+        var playerId = ToPlayerId(identityId);
+
+        if (!IsParticipant(id, playerId))
+        {
+            return ForbiddenProblem("You are not participating in this game.");
+        }
+
+        // The responding player must be the victim of a pending kill
+        var pending = _pendingKillStore.RemoveForVictim(id, playerId);
+        if (pending is null)
+        {
+            return NotFoundProblem(
+                "/errors/no-pending-kill",
+                "No pending kill",
+                "There is no pending kill claim against you."
+            );
+        }
+
+        if (request.Accepted)
+        {
+            // Execute the actual kill
+            var nextVictim = _gameService.Kill(id, pending.Killer, pending.Victim);
+            _eventBus.Notify(id);
+
+            return Ok(new { result = "confirmed" });
+        }
+        else
+        {
+            // Kill denied — just notify so killer sees the denial
+            _eventBus.Notify(id);
+            return Ok(new { result = "denied" });
+        }
     }
 
     [HttpGet("/games/{gameId}/leaderboard")]
@@ -474,4 +521,6 @@ public sealed class GamesController(
     public sealed record JoinGameRequest(string Name);
 
     public sealed record KillRequest(string VictimPlayerId);
+
+    public sealed record KillRespondRequest(bool Accepted);
 }

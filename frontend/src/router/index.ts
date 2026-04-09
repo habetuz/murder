@@ -44,6 +44,11 @@ router.beforeEach(async (to) => {
     return { name: 'landing' }
   }
 
+  // Redirect guests from landing to their active game
+  if (to.name === 'landing' && auth.isGuest && auth.guestGameId) {
+    return { name: 'game', params: { gameId: auth.guestGameId } }
+  }
+
   return true
 })
 

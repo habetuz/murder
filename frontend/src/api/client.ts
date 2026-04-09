@@ -8,6 +8,7 @@ import type {
   StartGameRequest,
   ChangeEndRequest,
   KillRequest,
+  KillRespondRequest,
   JoinGameRequest,
   SessionResponse,
   CreateUserResponse,
@@ -16,10 +17,12 @@ import type {
   MyGamesResponse,
   VictimResponse,
   KillResponse,
+  KillRespondResponse,
   LeaderboardResponse,
   ParticipantsResponse,
   CredentialDto,
   PlayerRef,
+  WatchPayload,
 } from '../types/api'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
@@ -162,9 +165,54 @@ export const api = {
   submitKill: (gameId: string, body: KillRequest) =>
     request<KillResponse>(`/games/${encodeURIComponent(gameId)}/kills`, { method: 'POST', body: JSON.stringify(body) }),
 
+  respondToKill: (gameId: string, body: KillRespondRequest) =>
+    request<KillRespondResponse>(`/games/${encodeURIComponent(gameId)}/kills/respond`, { method: 'POST', body: JSON.stringify(body) }),
+
   getLeaderboard: (gameId: string) =>
     request<LeaderboardResponse>(`/games/${encodeURIComponent(gameId)}/leaderboard`),
 
   getParticipants: (gameId: string) =>
     request<ParticipantsResponse>(`/games/${encodeURIComponent(gameId)}/participants`),
+}
+
+// SSE watch connection
+
+export interface GameWatchCallbacks {
+  onSync: (payload: WatchPayload) => void
+  onUpdate: (payload: WatchPayload) => void
+  onDeleted: () => void
+  onError: (error: string) => void
+}
+
+export function watchGame(gameId: string, callbacks: GameWatchCallbacks): () => void {
+  const url = `${BASE}/games/${encodeURIComponent(gameId)}/watch`
+  const eventSource = new EventSource(url, { withCredentials: true })
+
+  eventSource.addEventListener('SYNC', (e) => {
+    const payload: WatchPayload = JSON.parse(e.data)
+    callbacks.onSync(payload)
+  })
+
+  eventSource.addEventListener('UPDATE', (e) => {
+    const payload: WatchPayload = JSON.parse(e.data)
+    callbacks.onUpdate(payload)
+  })
+
+  eventSource.addEventListener('GAME_DELETED', () => {
+    callbacks.onDeleted()
+  })
+
+  eventSource.addEventListener('ERROR', (e) => {
+    const data = JSON.parse((e as MessageEvent).data)
+    callbacks.onError(data.title ?? 'Watch error')
+  })
+
+  eventSource.onerror = () => {
+    // EventSource auto-reconnects; if it gives up (CLOSED), notify
+    if (eventSource.readyState === EventSource.CLOSED) {
+      callbacks.onError('Connection lost')
+    }
+  }
+
+  return () => eventSource.close()
 }

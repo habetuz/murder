@@ -7,31 +7,49 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-const COLS = 10
-const ROWS = 4
+const COLS = 20
+const ROWS = 8
 const TOTAL = COLS * ROWS
+const REAPPEAR_DELAY = 300
 
 // Each cell: true = hidden, false = revealed
 const cells = ref<boolean[]>(Array(TOTAL).fill(true))
+const timers = new Map<number, ReturnType<typeof setTimeout>>()
 
 const revealedCount = computed(() => cells.value.filter(c => !c).length)
 const isFullyRevealed = computed(() => revealedCount.value === TOTAL)
 
 function revealCell(index: number) {
-  if (cells.value[index]) {
-    cells.value[index] = false
-    // Auto-reveal all if >50% uncovered
-    if (revealedCount.value > TOTAL * 0.5 && !isFullyRevealed.value) {
-      revealAll()
-    }
+  if (!cells.value[index]) return
+
+  cells.value[index] = false
+
+  // Clear existing timer for this cell if any
+  const existing = timers.get(index)
+  if (existing) clearTimeout(existing)
+
+  // Schedule reappearance
+  timers.set(index, setTimeout(() => {
+    cells.value[index] = true
+    timers.delete(index)
+  }, REAPPEAR_DELAY))
+
+  // Auto-reveal all if >60% uncovered
+  if (revealedCount.value > TOTAL * 0.6 && !isFullyRevealed.value) {
+    revealAll()
   }
 }
 
 function revealAll() {
+  // Cancel all reappear timers
+  for (const t of timers.values()) clearTimeout(t)
+  timers.clear()
   cells.value = Array(TOTAL).fill(false)
 }
 
 function rehide() {
+  for (const t of timers.values()) clearTimeout(t)
+  timers.clear()
   cells.value = Array(TOTAL).fill(true)
 }
 
@@ -84,10 +102,10 @@ function onPointerUp() {
           v-for="(hidden, i) in cells"
           :key="i"
           :class="[
-            'cursor-crosshair transition-all duration-200',
+            'cursor-crosshair transition-opacity',
             hidden
-              ? 'bg-murder-surface-light border border-murder-surface'
-              : 'opacity-0 pointer-events-none',
+              ? 'bg-murder-surface-light border-[0.5px] border-murder-surface opacity-100 duration-300'
+              : 'opacity-0 pointer-events-none duration-100',
           ]"
           @pointerdown.prevent="onPointerDown(i)"
           @pointerenter="onPointerEnter(i)"

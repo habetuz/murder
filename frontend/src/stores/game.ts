@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { api, ApiError } from '../api/client'
+import { api, watchGame as apiWatchGame } from '../api/client'
 import { useAuthStore } from './auth'
-import type { GameDto, ParticipantDto, LeaderboardEntry, CreateGameRequest, PatchGameRequest, StartGameRequest } from '../types/api'
+import type { GameDto, ParticipantDto, LeaderboardEntry, WatchPayload, CreateGameRequest, PatchGameRequest, StartGameRequest } from '../types/api'
 
 export const useGameStore = defineStore('game', () => {
   const authStore = useAuthStore()
@@ -19,8 +19,14 @@ export const useGameStore = defineStore('game', () => {
   const currentVictimId = ref<string | null>(null)
   const currentVictimName = ref<string | null>(null)
   const isDead = ref(false)
+  const pendingKill = ref(false)
+  const pendingKillSent = ref(false)
   const loadingGame = ref(false)
   const gameError = ref<string | null>(null)
+  const gameDeleted = ref(false)
+
+  // SSE watch handle
+  let closeWatch: (() => void) | null = null
 
   const isAdmin = computed(() =>
     currentGame.value !== null &&
@@ -61,63 +67,47 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  async function fetchGame(gameId: string) {
-    const { game } = await api.getGame(gameId)
-    currentGame.value = game
-    return game
+  function applyWatchPayload(payload: WatchPayload) {
+    currentGame.value = payload.game
+    currentParticipants.value = payload.participants
+    currentLeaderboard.value = payload.leaderboard ?? []
+    currentVictimId.value = payload.me.victimPlayerId
+    currentVictimName.value = payload.me.victimName
+    isDead.value = !payload.me.alive
+    pendingKill.value = payload.me.pendingKill
+    pendingKillSent.value = payload.me.pendingKillSent
+    gameError.value = null
   }
 
-  async function fetchParticipants(gameId: string) {
-    const { participants } = await api.getParticipants(gameId)
-    currentParticipants.value = participants
-    return participants
+  function startWatch(gameId: string) {
+    stopWatch()
+    loadingGame.value = true
+    gameDeleted.value = false
+
+    closeWatch = apiWatchGame(gameId, {
+      onSync(payload) {
+        loadingGame.value = false
+        applyWatchPayload(payload)
+      },
+      onUpdate(payload) {
+        applyWatchPayload(payload)
+      },
+      onDeleted() {
+        gameDeleted.value = true
+        currentGame.value = null
+        stopWatch()
+      },
+      onError(error) {
+        loadingGame.value = false
+        gameError.value = error
+      },
+    })
   }
 
-  async function fetchLeaderboard(gameId: string) {
-    const { entries } = await api.getLeaderboard(gameId)
-    currentLeaderboard.value = entries
-    return entries
-  }
-
-  async function fetchVictim(gameId: string) {
-    try {
-      const { victimPlayerId, victimName } = await api.getVictim(gameId)
-      currentVictimId.value = victimPlayerId
-      currentVictimName.value = victimName
-      isDead.value = false
-    } catch (e) {
-      if (e instanceof ApiError && e.is('player-dead')) {
-        isDead.value = true
-        currentVictimId.value = null
-        currentVictimName.value = null
-      } else if (e instanceof ApiError && (e.is('no-more-victims') || e.is('invalid-game-state'))) {
-        currentVictimId.value = null
-        currentVictimName.value = null
-      } else {
-        throw e
-      }
-    }
-  }
-
-  async function refreshAll(gameId: string) {
-    try {
-      const game = await fetchGame(gameId)
-      await fetchParticipants(gameId)
-
-      if (game.state === 'running' || game.state === 'ended') {
-        await Promise.allSettled([
-          fetchLeaderboard(gameId),
-          game.state === 'running' ? fetchVictim(gameId) : Promise.resolve(),
-        ])
-      }
-      gameError.value = null
-    } catch (e) {
-      if (e instanceof ApiError) {
-        if (e.status === 401) throw e // propagate so global handler fires
-        gameError.value = e.problem.detail ?? e.message
-      } else {
-        gameError.value = 'Network error'
-      }
+  function stopWatch() {
+    if (closeWatch) {
+      closeWatch()
+      closeWatch = null
     }
   }
 
@@ -157,30 +147,36 @@ export const useGameStore = defineStore('game', () => {
 
   async function patchGame(gameId: string, body: PatchGameRequest) {
     await api.patchGame(gameId, body)
-    await fetchGame(gameId)
   }
 
   async function changeEnd(gameId: string, endTime: string) {
     await api.changeEnd(gameId, { endTime })
-    await fetchGame(gameId)
   }
 
   async function submitKill(gameId: string, victimPlayerId: string) {
     const result = await api.submitKill(gameId, { victimPlayerId })
-    // Update victim immediately
-    currentVictimId.value = result.nextVictimPlayerId
-    currentVictimName.value = result.nextVictimName
+    // Kill is now pending — SSE will update pendingKillSent
+    return result
+  }
+
+  async function respondToKill(gameId: string, accepted: boolean) {
+    const result = await api.respondToKill(gameId, { accepted })
+    // SSE will update state after response
     return result
   }
 
   function clearCurrentGame() {
+    stopWatch()
     currentGame.value = null
     currentParticipants.value = []
     currentLeaderboard.value = []
     currentVictimId.value = null
     currentVictimName.value = null
     isDead.value = false
+    pendingKill.value = false
+    pendingKillSent.value = false
     gameError.value = null
+    gameDeleted.value = false
   }
 
   return {
@@ -193,19 +189,19 @@ export const useGameStore = defineStore('game', () => {
     currentVictimId,
     currentVictimName,
     isDead,
+    pendingKill,
+    pendingKillSent,
     loadingGame,
     gameError,
+    gameDeleted,
     isAdmin,
     participantMap,
     usernameMap,
     activeGames,
     historyGames,
     fetchMyGames,
-    fetchGame,
-    fetchParticipants,
-    fetchLeaderboard,
-    fetchVictim,
-    refreshAll,
+    startWatch,
+    stopWatch,
     createGame,
     joinGame,
     leaveGame,
@@ -215,6 +211,7 @@ export const useGameStore = defineStore('game', () => {
     patchGame,
     changeEnd,
     submitKill,
+    respondToKill,
     clearCurrentGame,
   }
 })
