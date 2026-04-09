@@ -123,7 +123,14 @@ public class Game : IReadOnlyGame
             throw new UnexpectedGameStateException(GameState.Running, State);
         }
 
-        return _murderChain!.Kill(murder, victim);
+        var newVictim = _murderChain!.Kill(murder, victim);
+        if (newVictim is null)
+        {
+            // If there are new more victims, the game is finished now
+            End();
+        }
+
+        return newVictim;
     }
 
     public Dictionary<PlayerId, uint> Leaderboard()

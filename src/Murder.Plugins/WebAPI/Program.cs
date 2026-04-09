@@ -17,12 +17,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+var corsOrigins = builder.Configuration.GetValue<string>("CORS_ORIGINS")?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? ["http://localhost:5173", "http://127.0.0.1:5173"];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+            .WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -105,5 +109,9 @@ app.Use(async (context, next) =>
 });
 
 app.MapControllers();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
 
 app.Run();
