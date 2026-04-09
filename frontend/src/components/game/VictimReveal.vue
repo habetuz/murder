@@ -10,7 +10,7 @@ const props = defineProps<{
 const COLS = 20
 const ROWS = 8
 const TOTAL = COLS * ROWS
-const REAPPEAR_DELAY = 300
+const REAPPEAR_DELAY = 1000
 
 // Each cell: true = hidden, false = revealed
 const cells = ref<boolean[]>(Array(TOTAL).fill(true))
