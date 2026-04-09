@@ -1,171 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap');
 
-:root {
-  --bg: #f4f6ff;
-  --ink: #111827;
-  --muted: #4b5563;
-  --line: #dbe3ff;
+@import "tailwindcss";
 
-  --brand: #2563eb;
-  --brand-strong: #1d4ed8;
-  --brand-soft: #e7f0ff;
+@theme {
+  --font-pixel: "Press Start 2P", monospace;
+  --font-body: "Nunito", sans-serif;
 
-  --secondary: #0ea5a4;
-  --secondary-strong: #0b8e8e;
-
-  --warn: #f59e0b;
-  --warn-strong: #d97706;
-
-  --danger: #ef4444;
-  --danger-strong: #dc2626;
-
-  --ok: #16a34a;
-
-  --panel: #ffffff;
-  --radius: 16px;
-  --radius-sm: 10px;
-  --shadow: 0 14px 30px rgba(37, 99, 235, 0.12);
+  --color-murder-bg: #1a0a2e;
+  --color-murder-surface: #2d1b4e;
+  --color-murder-surface-light: #3d2b6e;
+  --color-murder-accent: #00ff88;
+  --color-murder-danger: #ff3366;
+  --color-murder-warn: #ffcc00;
+  --color-murder-text: #e8e0f0;
+  --color-murder-dim: #8b7fa8;
+  --color-murder-border: #4a3670;
+  --color-murder-code: #00ccff;
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  html {
+    background-color: var(--color-murder-bg);
+    color: var(--color-murder-text);
+    font-family: var(--font-body);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100svh;
+    font-family: var(--font-body);
+  }
+
+  #app {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
 }
 
-html,
-body,
-#app {
-  margin: 0;
-  min-height: 100%;
-}
+@layer utilities {
+  .font-pixel {
+    font-family: var(--font-pixel);
+  }
 
-body {
-  font-family: 'Nunito', 'Segoe UI', sans-serif;
-  color: var(--ink);
-  background: var(--bg);
-}
+  .font-body {
+    font-family: var(--font-body);
+  }
 
-h1,
-h2,
-h3,
-h4 {
-  margin: 0;
-  font-family: 'Fredoka', 'Nunito', sans-serif;
-  letter-spacing: 0.01em;
-}
+  .shadow-pixel {
+    box-shadow: 4px 4px 0px #000000;
+  }
 
-p {
-  margin: 0;
-  line-height: 1.45;
-}
+  .shadow-pixel-sm {
+    box-shadow: 2px 2px 0px #000000;
+  }
 
-a {
-  color: var(--brand-strong);
-}
+  .shadow-pixel-accent {
+    box-shadow: 4px 4px 0px #000000, 0 0 12px rgba(0, 255, 136, 0.25);
+  }
 
-.panel {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  box-shadow: var(--shadow);
-  padding: 1rem;
-}
+  .shadow-pixel-danger {
+    box-shadow: 4px 4px 0px #000000, 0 0 12px rgba(255, 51, 102, 0.25);
+  }
 
-.panel h2 {
-  font-size: 1.35rem;
-}
+  .border-pixel {
+    border: 2px solid var(--color-murder-border);
+  }
 
-.game-button {
-  border: none;
-  border-radius: 999px;
-  padding: 0.72rem 1.1rem;
-  font: 700 0.95rem 'Fredoka', sans-serif;
-  min-height: 2.7rem;
-  cursor: pointer;
-  transition: transform 120ms ease, filter 120ms ease;
-}
-
-.game-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
-}
-
-.game-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.game-button.primary {
-  background: linear-gradient(135deg, var(--brand), var(--secondary));
-  color: #fff;
-}
-
-.game-button.secondary {
-  background: linear-gradient(135deg, #c7d8ff, #d7fff7);
-  color: #17326e;
-}
-
-.game-button.warn {
-  background: linear-gradient(135deg, var(--warn), #fbbf24);
-  color: #fff;
-}
-
-.game-button.danger {
-  background: linear-gradient(135deg, var(--danger), #f87171);
-  color: #fff;
-}
-
-.game-button.ghost {
-  background: #fff;
-  border: 1px solid var(--line);
-  color: var(--muted);
-}
-
-.text-input {
-  width: 100%;
-  border: 1px solid #c8d8ff;
-  border-radius: var(--radius-sm);
-  padding: 0.68rem 0.72rem;
-  font: 600 0.96rem 'Nunito', sans-serif;
-  background: #fff;
-}
-
-.text-input:focus {
-  outline: 2px solid #b6ccff;
-  border-color: #8bb1ff;
-}
-
-.status-message {
-  border-radius: var(--radius-sm);
-  padding: 0.7rem 0.85rem;
-  font-weight: 700;
-}
-
-.status-message.error {
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-}
-
-.status-message.success {
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-}
-
-.badge-chip {
-  display: inline-flex;
-  border-radius: 999px;
-  padding: 0.28rem 0.62rem;
-  font: 700 0.78rem 'Fredoka', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  background: var(--brand-soft);
-  color: var(--brand-strong);
-}
-
-@media (max-width: 760px) {
-  .panel {
-    padding: 0.85rem;
-    border-radius: 14px;
+  .pixel-corners {
+    border-radius: 0px;
   }
 }

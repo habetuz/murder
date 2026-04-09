@@ -77,7 +77,7 @@ public abstract class ApiControllerBase : ControllerBase
         return new
         {
             id = identity.Id.Id,
-            name = identity.Name,
+            name = identity is User user ? user.Name : null,
             kind = identity is User ? "user" : "guest",
         };
     }

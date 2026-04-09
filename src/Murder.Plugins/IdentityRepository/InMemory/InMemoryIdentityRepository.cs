@@ -26,7 +26,8 @@ public class InMemoryIdentityRepository : IIdentityRepository, IIdentityIdGenera
     public IdentityId IdentityOfName(string name)
     {
         var matches = _identities
-            .Where(pair => string.Equals(pair.Value.Name, name, StringComparison.OrdinalIgnoreCase))
+            .Where(pair => pair.Value is User)
+            .Where(pair => string.Equals(((User)pair.Value).Name, name, StringComparison.OrdinalIgnoreCase))
             .Select(pair => pair.Key)
             .Take(2)
             .ToArray();

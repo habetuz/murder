@@ -1,175 +1,177 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useAuthStore } from '../stores/auth';
-import { useGamesStore } from '../stores/games';
-import { ApiError, type CredentialDto } from '../types/api';
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { api, ApiError } from '../api/client'
+import type { CredentialDto } from '../types/api'
+import PixelCard from '../components/ui/PixelCard.vue'
+import PixelButton from '../components/ui/PixelButton.vue'
+import PixelInput from '../components/ui/PixelInput.vue'
+import PixelModal from '../components/ui/PixelModal.vue'
+import ErrorBanner from '../components/ui/ErrorBanner.vue'
+import LoadingSpinner from '../components/ui/LoadingSpinner.vue'
 
-const auth = useAuthStore();
-const games = useGamesStore();
+const auth = useAuthStore()
+const router = useRouter()
 
-const credentials = ref<CredentialDto[]>([]);
-const password = ref('');
-const loading = ref(false);
-const errorText = ref('');
-const successText = ref('');
+const credentials = ref<CredentialDto[]>([])
+const loadingCreds = ref(false)
+
+const showPassword = ref(false)
+const newPassword = ref('')
+const confirmPassword = ref('')
+const passwordLoading = ref(false)
+const passwordError = ref<string | null>(null)
+const passwordSuccess = ref(false)
+
+const showRevokeAll = ref(false)
+const revokeLoading = ref(false)
+const revokeError = ref<string | null>(null)
+
+const deleteLoading = ref(false)
+const deleteError = ref<string | null>(null)
 
 onMounted(async () => {
-  await refresh();
-});
-
-async function guarded(action: () => Promise<void>) {
-  loading.value = true;
-  errorText.value = '';
-  successText.value = '';
+  loadingCreds.value = true
   try {
-    await action();
-  } catch (error) {
-    if (error instanceof ApiError) {
-      errorText.value = error.problem?.detail ?? error.message;
-    } else {
-      errorText.value = 'Unexpected error.';
-    }
+    credentials.value = await api.getCredentials()
+  } catch {
+    // ignore
   } finally {
-    loading.value = false;
+    loadingCreds.value = false
+  }
+})
+
+async function savePassword() {
+  if (!newPassword.value || newPassword.value !== confirmPassword.value) return
+  passwordLoading.value = true
+  passwordError.value = null
+  passwordSuccess.value = false
+  try {
+    await api.createPassword(newPassword.value)
+    passwordSuccess.value = true
+    newPassword.value = ''
+    confirmPassword.value = ''
+    credentials.value = await api.getCredentials()
+    setTimeout(() => { showPassword.value = false }, 1000)
+  } catch (e) {
+    passwordError.value = e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Error saving password'
+  } finally {
+    passwordLoading.value = false
   }
 }
 
-async function refresh() {
-  await guarded(async () => {
-    await auth.refreshMe();
-    credentials.value = await games.api.getCredentials();
-  });
+async function deleteCredential(id: string) {
+  deleteLoading.value = true
+  deleteError.value = null
+  try {
+    await api.deleteCredential(id)
+    credentials.value = credentials.value.filter(c => c.id !== id)
+  } catch (e) {
+    deleteError.value = e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Error revoking'
+  } finally {
+    deleteLoading.value = false
+  }
 }
 
-async function savePassword() {
-  await guarded(async () => {
-    await games.api.setPassword(password.value);
-    password.value = '';
-    successText.value = 'Password updated.';
-    credentials.value = await games.api.getCredentials();
-  });
-}
-
-async function revoke(id: string) {
-  await guarded(async () => {
-    await games.api.revokeCredential(id);
-    credentials.value = await games.api.getCredentials();
-  });
-}
-
-async function revokeSessions() {
-  await guarded(async () => {
-    await games.api.revokeSessions();
-    successText.value = 'All sessions revoked. Please login again if needed.';
-    credentials.value = [];
-  });
+async function revokeAllSessions() {
+  revokeLoading.value = true
+  revokeError.value = null
+  try {
+    await api.revokeAllSessions()
+    auth.clearAuthState()
+    router.push({ name: 'landing' })
+  } catch (e) {
+    revokeError.value = e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Error revoking sessions'
+  } finally {
+    revokeLoading.value = false
+  }
 }
 </script>
 
 <template>
-  <main class="settings-view">
-    <section class="hero">
-      <p class="overline">User Settings</p>
-      <h1>{{ auth.player?.name }}</h1>
-      <p class="lead">Manage account credentials and sessions.</p>
-    </section>
+  <div class="flex-1 flex flex-col items-center px-4 py-6 max-w-2xl mx-auto w-full gap-6">
+    <div class="w-full">
+      <h2 class="font-pixel text-murder-text text-sm mb-1">SETTINGS</h2>
+      <p class="font-body text-murder-dim text-xs">Manage your account for {{ auth.player?.name ?? 'Guest' }}</p>
+    </div>
 
-    <p v-if="errorText" class="status-message error">{{ errorText }}</p>
-    <p v-if="successText" class="status-message success">{{ successText }}</p>
-
-    <section class="grid">
-      <section class="panel">
-        <h2>Password</h2>
-        <div class="stack">
-          <input v-model="password" class="text-input" type="password" placeholder="New password" />
-          <button class="game-button primary" :disabled="loading" @click="savePassword">Save password</button>
+    <!-- Credentials -->
+    <PixelCard title="CREDENTIALS" class="w-full">
+      <div class="flex flex-col gap-3">
+        <ErrorBanner :message="deleteError" />
+        <LoadingSpinner v-if="loadingCreds" size="sm" />
+        <div
+          v-for="cred in credentials"
+          :key="cred.id"
+          class="flex items-center justify-between gap-2 py-2 border-b border-murder-border last:border-0"
+        >
+          <div>
+            <p class="font-pixel text-[8px] text-murder-text uppercase">{{ cred.type }}</p>
+            <p v-if="cred.expiresAt" class="font-body text-murder-dim text-xs">
+              Expires: {{ new Date(cred.expiresAt).toLocaleString() }}
+            </p>
+          </div>
+          <PixelButton variant="danger" size="sm" :loading="deleteLoading" @click="deleteCredential(cred.id)">
+            REVOKE
+          </PixelButton>
         </div>
-      </section>
+        <PixelButton variant="ghost" size="sm" @click="showPassword = true">
+          SET PASSWORD
+        </PixelButton>
+      </div>
+    </PixelCard>
 
-      <section class="panel">
-        <h2>Credentials</h2>
-        <ul class="credentials">
-          <li v-for="credential in credentials" :key="credential.id">
-            <div>
-              <strong>{{ credential.type }}</strong>
-              <p>{{ credential.id }}</p>
-            </div>
-            <button class="game-button danger compact" :disabled="loading" @click="revoke(credential.id)">Revoke</button>
-          </li>
-          <li v-if="!credentials.length" class="muted">No credentials found.</li>
-        </ul>
-        <button class="game-button ghost" :disabled="loading" @click="revokeSessions">Revoke all sessions</button>
-      </section>
-    </section>
-  </main>
+    <!-- Sessions -->
+    <PixelCard title="SESSIONS" class="w-full">
+      <div class="flex flex-col gap-3">
+        <p class="font-body text-murder-dim text-xs">Revoke all active sessions and log out everywhere.</p>
+        <ErrorBanner :message="revokeError" />
+        <PixelButton variant="danger" size="sm" @click="showRevokeAll = true">
+          REVOKE ALL SESSIONS
+        </PixelButton>
+      </div>
+    </PixelCard>
+
+    <!-- Back -->
+    <RouterLink to="/">
+      <PixelButton variant="ghost" size="sm">← BACK</PixelButton>
+    </RouterLink>
+
+    <!-- Set password modal -->
+    <PixelModal :open="showPassword" title="SET PASSWORD" @close="showPassword = false">
+      <div class="flex flex-col gap-4">
+        <ErrorBanner :message="passwordError" />
+        <p v-if="passwordSuccess" class="font-pixel text-[7px] text-murder-accent">PASSWORD SAVED!</p>
+        <PixelInput v-model="newPassword" label="New Password" type="password" placeholder="••••••••" autocomplete="new-password" />
+        <PixelInput v-model="confirmPassword" label="Confirm Password" type="password" placeholder="••••••••" autocomplete="new-password" />
+        <PixelButton
+          variant="primary"
+          size="md"
+          class="w-full"
+          :loading="passwordLoading"
+          :disabled="!newPassword || newPassword !== confirmPassword"
+          @click="savePassword"
+        >
+          SAVE
+        </PixelButton>
+      </div>
+    </PixelModal>
+
+    <!-- Revoke all confirm modal -->
+    <PixelModal :open="showRevokeAll" title="REVOKE ALL SESSIONS?" @close="showRevokeAll = false">
+      <div class="flex flex-col gap-4">
+        <p class="font-body text-murder-text text-sm">You'll be logged out everywhere.</p>
+        <ErrorBanner :message="revokeError" />
+        <div class="flex gap-2">
+          <PixelButton variant="danger" size="sm" class="flex-1" :loading="revokeLoading" @click="revokeAllSessions">
+            CONFIRM
+          </PixelButton>
+          <PixelButton variant="ghost" size="sm" @click="showRevokeAll = false">
+            CANCEL
+          </PixelButton>
+        </div>
+      </div>
+    </PixelModal>
+  </div>
 </template>
-
-<style scoped>
-.settings-view {
-  display: grid;
-  gap: 1rem;
-}
-
-.overline {
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.76rem;
-  color: #3b82f6;
-  font-weight: 800;
-}
-
-h1 {
-  margin: 0.2rem 0;
-}
-
-.lead {
-  margin: 0;
-  color: #4b5563;
-}
-
-.grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-}
-
-.stack {
-  display: grid;
-  gap: 0.65rem;
-}
-
-.credentials {
-  margin: 0 0 0.8rem;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.5rem;
-}
-
-.credentials li {
-  border: 1px solid #dbeafe;
-  border-radius: 0.75rem;
-  padding: 0.55rem 0.65rem;
-  background: linear-gradient(135deg, #ffffff, #f5f9ff);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.credentials p {
-  margin: 0;
-  color: #475569;
-  font-size: 0.84rem;
-}
-
-.muted {
-  color: #64748b;
-}
-
-.compact {
-  padding: 0.4rem 0.65rem;
-  min-height: 0;
-}
-</style>

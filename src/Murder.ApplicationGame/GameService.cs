@@ -30,10 +30,10 @@ public class GameService(IGameRepository gameRepository)
         return _repository.FindGameById(game);
     }
 
-    public void JoinGame(GameId game, PlayerId player)
+    public void JoinGame(GameId game, PlayerId player, string displayName)
     {
         var gameEntity = _repository.FindGameById(game) ?? throw new GameNotFoundException(game);
-        gameEntity.Join(player);
+        gameEntity.Join(player, displayName);
         _repository.Update(gameEntity);
     }
 
@@ -63,9 +63,9 @@ public class GameService(IGameRepository gameRepository)
         _repository.Update(gameEntity);
     }
 
-    public GameId CreateGame(string name, PlayerId admin, Visibility visibility)
+    public GameId CreateGame(string name, PlayerId admin, string adminDisplayName, Visibility visibility)
     {
-        var gameEntity = _repository.GameFactory.CreateGame(name, admin, visibility);
+        var gameEntity = _repository.GameFactory.CreateGame(name, admin, adminDisplayName, visibility);
         _repository.Store(gameEntity);
         return gameEntity.Id;
     }
@@ -120,5 +120,11 @@ public class GameService(IGameRepository gameRepository)
     {
         var gameEntity = _repository.FindGameById(game) ?? throw new GameNotFoundException(game);
         return gameEntity.Participants;
+    }
+
+    public Dictionary<PlayerId, string> ParticipantNames(GameId game)
+    {
+        var gameEntity = _repository.FindGameById(game) ?? throw new GameNotFoundException(game);
+        return gameEntity.ParticipantNames;
     }
 }

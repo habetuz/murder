@@ -1,35 +1,5 @@
-# Murder Frontend
+# Vue 3 + TypeScript + Vite
 
-Vue 3 + PrimeVue frontend for the Murder game platform.
+This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
 
-## Features
-
-- Start screen for anonymous and authenticated users
-- Game screen with pending/running/ended states
-- Victim reveal via intentional hold-to-reveal interaction
-- User settings screen for credential management
-- Mobile-first layout
-- Installable PWA via `vite-plugin-pwa`
-
-## Run
-
-```bash
-bun install
-cp .env.example .env
-bun dev
-```
-
-Frontend runs on `http://localhost:5173` by default.
-
-Backend should run on `http://localhost:8080`.
-
-## Build
-
-```bash
-bun run build
-bun run preview
-```
-
-## Environment
-
-- `VITE_API_BASE_URL`: Base URL of the WebAPI (default: `/api`)
+Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).

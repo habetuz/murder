@@ -30,13 +30,13 @@
         {
           default = pkgs.mkShellNoCC {
             packages = with pkgs; [
-              dotnetCorePackages.dotnet_10.sdk
+              dotnetCorePackages.sdk_10_0-bin
               bun
             ];
 
             env = {
               DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
-              DOTNET_ROOT=pkgs.dotnetCorePackages.dotnet_10.sdk + "/share/dotnet";
+              DOTNET_ROOT=pkgs.dotnetCorePackages.sdk_10_0-bin + "/share/dotnet";
             };
           };
         }

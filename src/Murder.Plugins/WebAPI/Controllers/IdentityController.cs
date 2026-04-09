@@ -5,6 +5,7 @@ using Murder.DomainGame;
 using Murder.DomainIdentity;
 using Murder.Plugins.AuthenticationMethod.SessionToken;
 using Murder.Plugins.WebAPI.Authentication;
+using Murder.Plugins.WebAPI.Watch;
 
 namespace Murder.Plugins.WebAPI.Controllers;
 
@@ -12,12 +13,14 @@ namespace Murder.Plugins.WebAPI.Controllers;
 public sealed class IdentityController(
     IdentityService identityService,
     AuthenticationService authenticationService,
-    GameService gameService
+    GameService gameService,
+    GameEventBus eventBus
 ) : ApiControllerBase
 {
     private readonly IdentityService _identityService = identityService;
     private readonly AuthenticationService _authenticationService = authenticationService;
     private readonly GameService _gameService = gameService;
+    private readonly GameEventBus _eventBus = eventBus;
 
     [HttpPost("/users")]
     public IActionResult CreateUser([FromBody] CreateUserRequest request)
@@ -68,8 +71,9 @@ public sealed class IdentityController(
             return ValidationProblemResult("Name and gameId are required.");
         }
 
-        var guestIdentityId = _identityService.CreateGuest(request.Name);
-        _gameService.JoinGame(new GameId(request.GameId), new PlayerId(guestIdentityId.Id));
+        var guestIdentityId = _identityService.CreateGuest();
+        _gameService.JoinGame(new GameId(request.GameId), new PlayerId(guestIdentityId.Id), request.Name);
+        _eventBus.Notify(new GameId(request.GameId));
 
         var sessionToken = _authenticationService.AddMethod<SessionTokenMethodKey>(
             guestIdentityId,
@@ -95,7 +99,7 @@ public sealed class IdentityController(
                 player = new
                 {
                     id = guestIdentityId.Id,
-                    name = request.Name,
+                    name = (string?)null,
                     kind = "guest",
                 },
                 joinedGameId = request.GameId,
@@ -163,12 +167,14 @@ public sealed class IdentityController(
 
     private static object ToPlayerProfile(Identity identity)
     {
+        var isUser = identity is User;
+        var user = identity as User;
         return new
         {
             id = identity.Id.Id,
-            name = identity.Name,
-            kind = identity is User ? "user" : "guest",
-            state = identity is User user ? user.State.ToString().ToLowerInvariant() : null,
+            name = user?.Name,
+            kind = isUser ? "user" : "guest",
+            state = user?.State.ToString().ToLowerInvariant(),
         };
     }
 

@@ -4,6 +4,7 @@ using Murder.ApplicationIdentity;
 using Murder.DomainGame;
 using Murder.DomainGame.GameAggregate;
 using Murder.Plugins.AuthenticationMethod.SessionToken;
+using Murder.Plugins.WebAPI.Watch;
 
 namespace Murder.Plugins.WebAPI.Controllers;
 
@@ -11,12 +12,14 @@ namespace Murder.Plugins.WebAPI.Controllers;
 public sealed class GamesController(
     GameService gameService,
     IdentityService identityService,
-    AuthenticationService authenticationService
+    AuthenticationService authenticationService,
+    GameEventBus eventBus
 ) : ApiControllerBase
 {
     private readonly GameService _gameService = gameService;
     private readonly IdentityService _identityService = identityService;
     private readonly AuthenticationService _authenticationService = authenticationService;
+    private readonly GameEventBus _eventBus = eventBus;
 
     [HttpPost("/games")]
     public IActionResult CreateGame([FromBody] CreateGameRequest request)
@@ -31,7 +34,12 @@ public sealed class GamesController(
             return ValidationProblemResult("Name is required.");
         }
 
-        var gameId = _gameService.CreateGame(request.Name, ToPlayerId(identityId), Visibility.Private);
+        if (string.IsNullOrWhiteSpace(request.DisplayName))
+        {
+            return ValidationProblemResult("DisplayName is required.");
+        }
+
+        var gameId = _gameService.CreateGame(request.Name, ToPlayerId(identityId), request.DisplayName, Visibility.Private);
 
         if (!string.IsNullOrWhiteSpace(request.Description))
         {
@@ -120,6 +128,7 @@ public sealed class GamesController(
             _gameService.ChangeEnd(id, request.EndTime.Value);
         }
 
+        _eventBus.Notify(id);
         return NoContent();
     }
 
@@ -148,6 +157,7 @@ public sealed class GamesController(
         }
 
         _gameService.DeleteGame(id);
+        _eventBus.NotifyDeleted(id);
         return NoContent();
     }
 
@@ -164,7 +174,7 @@ public sealed class GamesController(
     }
 
     [HttpPost("/games/{gameId}/join")]
-    public IActionResult JoinGame(string gameId)
+    public IActionResult JoinGame(string gameId, [FromBody] JoinGameRequest request)
     {
         if (!TryGetCurrentIdentity(out var identityId))
         {
@@ -176,7 +186,13 @@ public sealed class GamesController(
             return ForbiddenProblem("Guests cannot join additional games.");
         }
 
-        _gameService.JoinGame(ToGameId(gameId), ToPlayerId(identityId));
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return ValidationProblemResult("Name is required.");
+        }
+
+        _gameService.JoinGame(ToGameId(gameId), ToPlayerId(identityId), request.Name);
+        _eventBus.Notify(ToGameId(gameId));
         return NoContent();
     }
 
@@ -195,6 +211,7 @@ public sealed class GamesController(
             _authenticationService.RemoveMethod<SessionTokenMethodKey>(identityId);
         }
 
+        _eventBus.Notify(ToGameId(gameId));
         return NoContent();
     }
 
@@ -222,7 +239,16 @@ public sealed class GamesController(
             return ForbiddenProblem("Only the game admin can start this game.");
         }
 
-        _gameService.StartGame(id, request.EndTime);
+        try
+        {
+            _gameService.StartGame(id, request.EndTime);
+        }
+        catch (Murder.DomainGame.GameAggregate.NotEnoughParticipantsException ex)
+        {
+            return ValidationProblemResult(ex.Message);
+        }
+
+        _eventBus.Notify(id);
         return NoContent();
     }
 
@@ -251,6 +277,7 @@ public sealed class GamesController(
         }
 
         _gameService.EndGame(id);
+        _eventBus.Notify(id);
         return NoContent();
     }
 
@@ -284,6 +311,7 @@ public sealed class GamesController(
         }
 
         _gameService.ChangeEnd(id, request.EndTime.Value);
+        _eventBus.Notify(id);
         return NoContent();
     }
 
@@ -304,7 +332,8 @@ public sealed class GamesController(
         }
 
         var victimPlayerId = _gameService.Victim(id, playerId);
-        return Ok(new { victimPlayerId = victimPlayerId.Id });
+        var names = _gameService.ParticipantNames(id);
+        return Ok(new { victimPlayerId = victimPlayerId.Id, victimName = names[victimPlayerId] });
     }
 
     [HttpPost("/games/{gameId}/kills")]
@@ -329,10 +358,18 @@ public sealed class GamesController(
         }
 
         var nextVictim = _gameService.Kill(id, playerId, new PlayerId(request.VictimPlayerId));
+        _eventBus.Notify(id);
+        string? nextVictimName = null;
+        if (nextVictim is not null)
+        {
+            var names = _gameService.ParticipantNames(id);
+            nextVictimName = names[nextVictim.Value];
+        }
         return Ok(
             new
             {
                 nextVictimPlayerId = nextVictim?.Id,
+                nextVictimName,
                 gameEnded = nextVictim is null,
             }
         );
@@ -354,11 +391,13 @@ public sealed class GamesController(
             return ForbiddenProblem("You are not participating in this game.");
         }
 
+        var names = _gameService.ParticipantNames(id);
         var entries = _gameService
             .Leaderboard(id)
             .Select(pair => new
             {
                 playerId = pair.Key.Id,
+                name = names[pair.Key],
                 kills = pair.Value,
             });
 
@@ -381,14 +420,19 @@ public sealed class GamesController(
             return ForbiddenProblem("You are not participating in this game.");
         }
 
+        var names = _gameService.ParticipantNames(id);
         var participants = _gameService
             .Participants(id)
-            .Select(player => _identityService.GetIdentity(ToIdentityId(player)))
-            .Select(identity => new
+            .Select(player =>
             {
-                id = identity.Id.Id,
-                name = identity.Name,
-                kind = identity is Murder.DomainIdentity.User ? "user" : "guest",
+                var identity = _identityService.GetIdentity(ToIdentityId(player));
+                return new
+                {
+                    id = player.Id,
+                    name = names[player],
+                    username = (identity as Murder.DomainIdentity.User)?.Name,
+                    kind = identity is Murder.DomainIdentity.User ? "user" : "guest",
+                };
             });
 
         return Ok(new { participants });
@@ -419,13 +463,15 @@ public sealed class GamesController(
         };
     }
 
-    public sealed record CreateGameRequest(string Name, string? Description, DateTimeOffset? EndTime);
+    public sealed record CreateGameRequest(string Name, string DisplayName, string? Description, DateTimeOffset? EndTime);
 
     public sealed record PatchGameRequest(string? Name, string? Description, DateTimeOffset? EndTime);
 
     public sealed record StartGameRequest(DateTimeOffset? EndTime);
 
     public sealed record ChangeEndRequest(DateTimeOffset? EndTime);
+
+    public sealed record JoinGameRequest(string Name);
 
     public sealed record KillRequest(string VictimPlayerId);
 }

@@ -592,6 +592,177 @@ Example:
 | `GET /games/{gameId}/leaderboard` | `GameService.Leaderboard()` |
 | `GET /games/{gameId}/participants` | `GameService.Participants()` |
 
+### GET /games/{gameId}/watch
+
+Server-Sent Events (SSE) endpoint that keeps an open HTTP connection and pushes game state changes to the client. Inspired by the Kubernetes watch API pattern.
+
+#### Protocol
+
+- Transport: [Server-Sent Events (SSE)](https://html.spec.whatwg.org/multipage/server-sent-events.html)
+- Content-Type: `text/event-stream`
+- Connection: long-lived, chunked transfer encoding
+- Auth: session cookie (same as all other endpoints)
+- Authorization: participant only
+
+#### Behavior
+
+1. Client opens connection: `GET /games/{gameId}/watch`
+2. Server immediately sends a `SYNC` event containing the full current state snapshot.
+3. Server holds connection open and pushes `UPDATE` events whenever game state changes.
+4. Events are player-scoped: the victim field reflects the authenticated caller's assignment, and is omitted for dead players.
+5. Connection closes when:
+   - Client disconnects
+   - Game is deleted
+   - Server shuts down
+   - A keepalive timeout is missed (client should reconnect)
+
+#### Keepalive
+
+The server sends an SSE comment (`: keepalive`) every 15 seconds to detect dead connections.
+
+#### Event Format
+
+Each SSE message has:
+- `event:` — event type (`SYNC`, `UPDATE`, `GAME_DELETED`, `ERROR`)
+- `data:` — JSON payload
+
+#### Event Types
+
+**`SYNC`** — Full state snapshot, sent once on connection open.
+
+```
+event: SYNC
+data: {
+data:   "game": {
+data:     "id": "ABC12",
+data:     "name": "Office April Round",
+data:     "description": "Spring event",
+data:     "state": "running",
+data:     "adminPlayerId": "ply_abc123",
+data:     "startTime": "2026-04-09T10:00:00Z",
+data:     "endTime": "2026-04-15T18:00:00Z"
+data:   },
+data:   "participants": [
+data:     { "id": "ply_abc123", "name": "alice", "kind": "user" },
+data:     { "id": "ply_guest987", "name": "Guest-Blue", "kind": "guest" }
+data:   ],
+data:   "leaderboard": [
+data:     { "playerId": "ply_abc123", "kills": 2 },
+data:     { "playerId": "ply_guest987", "kills": 1 }
+data:   ],
+data:   "me": {
+data:     "victimPlayerId": "ply_guest987",
+data:     "alive": true
+data:   }
+data: }
+```
+
+**`UPDATE`** — Partial or full state update, sent when something changes.
+
+Same payload shape as `SYNC`. The server always sends the full snapshot (not a diff) to keep the protocol simple and idempotent. The client replaces its local state entirely on each `UPDATE`.
+
+```
+event: UPDATE
+data: { ... same shape as SYNC ... }
+```
+
+**`GAME_DELETED`** — Game was deleted by admin. Client should navigate away.
+
+```
+event: GAME_DELETED
+data: {}
+```
+
+**`ERROR`** — Unrecoverable error. Client should close and not reconnect.
+
+```
+event: ERROR
+data: { "type": "/errors/not-participant", "title": "Not a participant", "status": 403 }
+```
+
+#### Payload Schema
+
+```
+WatchPayload {
+  game: GameDto,
+  participants: ParticipantDto[],
+  leaderboard: LeaderboardEntry[] | null,
+  me: PlayerState
+}
+
+GameDto {
+  id: string,
+  name: string,
+  description: string | null,
+  state: "pending" | "running" | "ended",
+  adminPlayerId: string,
+  startTime: string | null,
+  endTime: string | null
+}
+
+ParticipantDto {
+  id: string,
+  name: string,
+  kind: "user" | "guest"
+}
+
+LeaderboardEntry {
+  playerId: string,
+  kills: number
+}
+
+PlayerState {
+  victimPlayerId: string | null,
+  alive: boolean
+}
+```
+
+Field rules by game state:
+
+| Field | `pending` | `running` | `ended` |
+|---|---|---|---|
+| `leaderboard` | `null` | `LeaderboardEntry[]` | `LeaderboardEntry[]` |
+| `me.victimPlayerId` | `null` | victim ID (if alive) or `null` | `null` |
+| `me.alive` | `true` | `true` / `false` | last known state |
+
+#### Events That Trigger an `UPDATE`
+
+| Trigger | Game state |
+|---|---|
+| Player joins | pending |
+| Player leaves | pending |
+| Game metadata changed (name, description, endTime) | any |
+| Game started | pending → running |
+| Game ended (manual or timer) | running → ended |
+| Kill recorded | running |
+| Game deleted | any (sends `GAME_DELETED` instead) |
+
+#### Error Responses (non-SSE)
+
+If the initial handshake fails, the server responds with a normal JSON error before switching to SSE:
+
+- `401 Unauthorized` — no valid session
+- `403 Forbidden` — not a participant
+- `404 Not Found` — game does not exist
+
+#### Implementation Notes
+
+- The watch endpoint does not replace the existing REST endpoints. Mutating operations (kill, start, end, join, leave, etc.) remain as POST/PATCH/DELETE requests. The watch endpoint is read-only.
+- The backend must maintain a per-game notification channel (e.g. in-memory pub/sub or `Channel<T>`) so that mutating operations can signal watchers.
+- Each SSE connection subscribes to the game's channel on connect and unsubscribes on disconnect.
+- The version counter is per-game and increments on every state mutation. It is **not** a global counter.
+- Victim resolution is per-connection (each player sees their own victim). The server must compute `me` per watcher when broadcasting.
+- The `EventSource` browser API handles automatic reconnection natively. Every reconnect receives a fresh `SYNC`.
+- ASP.NET implementation: use `IAsyncEnumerable<string>` or write directly to `Response.Body` with `Response.ContentType = "text/event-stream"` and `Response.Headers.CacheControl = "no-cache"`.
+
+#### Service Traceability
+
+| Watch trigger | Service method(s) called to build payload |
+|---|---|
+| Any | `GameService.GetGame()`, `GameService.Participants()` + `IdentityService.GetIdentity()` per participant |
+| running/ended | + `GameService.Leaderboard()` |
+| running + alive | + `GameService.Victim()` |
+
 ## Notes About Existing Endpoints
 
 Current implemented endpoints (`/login`, `/user`, `/self`, `/credential`) are a prototype.

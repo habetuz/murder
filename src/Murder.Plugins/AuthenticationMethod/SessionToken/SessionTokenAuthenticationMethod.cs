@@ -19,7 +19,7 @@ public class SessionTokenAuthenticationMethod(
     private readonly TimeSpan _tokenLifetime =
         tokenLifetime is { } configuredLifetime && configuredLifetime > TimeSpan.Zero
             ? configuredLifetime
-            : TimeSpan.FromMinutes(30);
+            : TimeSpan.FromHours(24);
 
     public IdentityId? Authenticate(SessionTokenIncomingCredential credential)
     {

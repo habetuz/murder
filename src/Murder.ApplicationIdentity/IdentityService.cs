@@ -30,9 +30,9 @@ public class IdentityService(IIdentityRepository identityRepository)
         return user.Id;
     }
 
-    public IdentityId CreateGuest(string name)
+    public IdentityId CreateGuest()
     {
-        var guest = _identityRepository.IdentityFactory.CreateGuest(name);
+        var guest = _identityRepository.IdentityFactory.CreateGuest();
         _identityRepository.Store(guest);
         return guest.Id;
     }

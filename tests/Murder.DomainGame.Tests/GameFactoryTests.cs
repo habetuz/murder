@@ -12,7 +12,7 @@ public class GameFactoryTests
     {
         var factory = new GameFactory(_idGenerator);
 
-        var game = factory.CreateGame("The Haunted Mansion", _admin);
+        var game = factory.CreateGame("The Haunted Mansion", _admin, "AdminName");
 
         Assert.Equal("The Haunted Mansion", game.Name);
     }
@@ -22,7 +22,7 @@ public class GameFactoryTests
     {
         var factory = new GameFactory(_idGenerator);
 
-        var game = factory.CreateGame("The Haunted Mansion", _admin);
+        var game = factory.CreateGame("The Haunted Mansion", _admin, "AdminName");
 
         Assert.Equal(_admin, game.Admin);
     }
@@ -32,8 +32,8 @@ public class GameFactoryTests
     {
         var factory = new GameFactory(_idGenerator);
 
-        var game1 = factory.CreateGame("Game One", _admin);
-        var game2 = factory.CreateGame("Game Two", _admin);
+        var game1 = factory.CreateGame("Game One", _admin, "AdminName");
+        var game2 = factory.CreateGame("Game Two", _admin, "AdminName");
 
         Assert.NotEqual(game1.Id, game2.Id);
     }

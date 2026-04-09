@@ -32,14 +32,20 @@ public class Game : IReadOnlyGame
         get =>
             State switch
             {
-                GameState.Pending => [.. _tmpParticipants!],
+                GameState.Pending => [.. _tmpParticipants!.Keys],
                 GameState.Running or GameState.Ended => _murderChain!.Participants,
                 _ => throw new NotImplementedException(),
             };
     }
 
+    public Dictionary<PlayerId, string> ParticipantNames
+    {
+        get => new(_participantNames);
+    }
+
     MurderChain? _murderChain;
-    List<PlayerId>? _tmpParticipants;
+    Dictionary<PlayerId, string>? _tmpParticipants;
+    Dictionary<PlayerId, string> _participantNames;
     readonly IDateTimeOffsetProvider _dateTimeProvider;
     readonly IShuffleParticipants _participantShuffler;
 
@@ -47,6 +53,7 @@ public class Game : IReadOnlyGame
         GameId id,
         string name,
         PlayerId admin,
+        string adminDisplayName,
         IDateTimeOffsetProvider dateTimeProvider,
         IShuffleParticipants participantsShuffler
     )
@@ -56,25 +63,25 @@ public class Game : IReadOnlyGame
         Admin = admin;
         _dateTimeProvider = dateTimeProvider;
         _participantShuffler = participantsShuffler;
-        _tmpParticipants = [admin];
+        _tmpParticipants = new() { [admin] = adminDisplayName };
+        _participantNames = new() { [admin] = adminDisplayName };
     }
 
-    public void Join(PlayerId player)
+    public void Join(PlayerId player, string displayName)
     {
         if (State != GameState.Pending)
         {
             throw new UnexpectedGameStateException(GameState.Pending, State);
         }
 
-        _tmpParticipants!.Add(player);
+        _tmpParticipants![player] = displayName;
+        _participantNames[player] = displayName;
         if (_tmpParticipants.Count == 1)
         {
             // This is the first player joining a game, after it had 0 players
             // Make this player the administrator
             Admin = player;
         }
-
-        _tmpParticipants = [.. _tmpParticipants.Distinct()]; // Deduplicate
     }
 
     public void Remove(PlayerId player)
@@ -85,6 +92,7 @@ public class Game : IReadOnlyGame
         }
 
         _tmpParticipants!.Remove(player);
+        _participantNames.Remove(player);
         if (Admin == player)
         {
             // Admin was removed. Assign a new admin
@@ -93,7 +101,7 @@ public class Game : IReadOnlyGame
             Admin = null;
             if (_tmpParticipants.Count > 0)
             {
-                Admin = _tmpParticipants[0];
+                Admin = _tmpParticipants.Keys.First();
             }
         }
     }
@@ -135,6 +143,11 @@ public class Game : IReadOnlyGame
             throw new UnexpectedGameStateException(GameState.Pending, State);
         }
 
+        if (_tmpParticipants!.Count < 2)
+        {
+            throw new NotEnoughParticipantsException(_tmpParticipants.Count);
+        }
+
         StartTime = _dateTimeProvider.Now;
 
         // Unsert end time if it is invalid
@@ -143,7 +156,7 @@ public class Game : IReadOnlyGame
             EndTime = null;
         }
 
-        _murderChain = new([.. _tmpParticipants!], _participantShuffler);
+        _murderChain = new([.. _tmpParticipants!.Keys], _participantShuffler);
         _tmpParticipants = null;
     }
 

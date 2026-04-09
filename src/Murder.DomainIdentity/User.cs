@@ -1,7 +1,8 @@
 namespace Murder.DomainIdentity;
 
-public class User(IdentityId id, string name) : Identity(id, name)
+public class User(IdentityId id, string name) : Identity(id)
 {
+    public string Name { get; } = name;
     public UserState State { get; private set; } = UserState.Active;
 
     public void Deactivate()

@@ -8,6 +8,7 @@ using Murder.Plugins.CredentialRepository.InMemory;
 using Murder.Plugins.GameRepositoy.InMemory;
 using Murder.Plugins.IdentityRepository.InMemory;
 using Murder.Plugins.WebAPI.Authentication;
+using Murder.Plugins.WebAPI.Watch;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,7 @@ builder.Services.AddSingleton<IGameRepository, InMemoryGameRepository>();
 builder.Services.AddSingleton<IdentityService>();
 builder.Services.AddSingleton<AuthenticationService>();
 builder.Services.AddSingleton<GameService>();
+builder.Services.AddSingleton<GameEventBus>();
 
 builder.Services.AddSingleton<PasswordAuthenticationMethod>();
 builder.Services.AddSingleton<SessionTokenAuthenticationMethod>();

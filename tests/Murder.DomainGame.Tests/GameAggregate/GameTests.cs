@@ -16,7 +16,7 @@ public class GameTests
     public void NewGame_IsInPendingState()
     {
         var clock = new FakeDateTimeOffsetProvider();
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
 
         Assert.Equal(GameState.Pending, game.State);
     }
@@ -26,8 +26,9 @@ public class GameTests
     {
         var now = DateTimeOffset.UtcNow;
         var clock = new FakeDateTimeOffsetProvider { Now = now };
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
 
+        game.Join(PlayerB, "PlayerB");
         // Start at a moment in the past so StartTime is recorded, then move
         // the clock back before that moment.
         clock.Now = now;
@@ -42,7 +43,8 @@ public class GameTests
     {
         var now = DateTimeOffset.UtcNow;
         var clock = new FakeDateTimeOffsetProvider { Now = now };
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
+        game.Join(PlayerB, "PlayerB");
 
         game.Start();
 
@@ -54,7 +56,8 @@ public class GameTests
     {
         var now = DateTimeOffset.UtcNow;
         var clock = new FakeDateTimeOffsetProvider { Now = now };
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
+        game.Join(PlayerB, "PlayerB");
 
         game.SetEnd(now.AddHours(1));
         game.Start();
@@ -67,12 +70,23 @@ public class GameTests
     {
         var now = DateTimeOffset.UtcNow;
         var clock = new FakeDateTimeOffsetProvider { Now = now };
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
+        game.Join(PlayerB, "PlayerB");
 
         game.Start();
-        game.SetEnd(now.AddHours(-1));
+        game.SetEnd(now.AddHours(1));
+        clock.Now = now.AddHours(2); // advance past end time
 
         Assert.Equal(GameState.Ended, game.State);
+    }
+
+    [Fact]
+    public void Start_Throws_WhenFewerThanTwoParticipants()
+    {
+        var clock = new FakeDateTimeOffsetProvider();
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
+
+        Assert.Throws<NotEnoughParticipantsException>(() => game.Start());
     }
 
     // ── Join / Remove ─────────────────────────────────────────────────────────
@@ -81,9 +95,9 @@ public class GameTests
     public void Join_AddsParticipant_ToPendingGame()
     {
         var clock = new FakeDateTimeOffsetProvider();
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
 
-        game.Join(PlayerB);
+        game.Join(PlayerB, "PlayerB");
 
         Assert.Contains(PlayerB, game.Participants);
     }
@@ -92,8 +106,8 @@ public class GameTests
     public void Remove_PromotesFirstRemainingPlayer_AsAdmin_WhenAdminLeaves()
     {
         var clock = new FakeDateTimeOffsetProvider();
-        var game = new Game(TestGameId, "Night of Knives", AdminId, clock, participantsShuffler);
-        game.Join(PlayerB);
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
+        game.Join(PlayerB, "PlayerB");
 
         game.Remove(AdminId);
 
@@ -151,9 +165,9 @@ public class GameTests
         params PlayerId[] additionalPlayers
     )
     {
-        var game = new Game(TestGameId, "Night of Knives", admin, clock, participantsShuffler);
+        var game = new Game(TestGameId, "Night of Knives", admin, admin.Id, clock, participantsShuffler);
         foreach (var player in additionalPlayers)
-            game.Join(player);
+            game.Join(player, player.Id);
         game.Start();
         return game;
     }

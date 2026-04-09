@@ -1,49 +1,50 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import StartView from '../views/StartView.vue';
-import GameView from '../views/GameView.vue';
-import SettingsView from '../views/SettingsView.vue';
-import { useAuthStore } from '../stores/auth';
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      name: 'start',
-      component: StartView,
+      name: 'landing',
+      component: () => import('../views/LandingView.vue'),
     },
     {
       path: '/game/:gameId',
       name: 'game',
-      component: GameView,
+      component: () => import('../views/GameView.vue'),
       meta: { requiresAuth: true },
-    },
-    {
-      path: '/games/:gameId',
-      redirect: (to) => ({ name: 'game', params: { gameId: to.params.gameId } }),
     },
     {
       path: '/settings',
       name: 'settings',
-      component: SettingsView,
+      component: () => import('../views/SettingsView.vue'),
       meta: { requiresAuth: true, requiresUser: true },
     },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
-});
+})
 
 router.beforeEach(async (to) => {
-  const auth = useAuthStore();
-  await auth.bootstrap();
+  const auth = useAuthStore()
+  await auth.bootstrap()
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return { name: 'start' };
+    const query: Record<string, string> = {}
+    if (to.name === 'game' && to.params.gameId) {
+      query.join = to.params.gameId as string
+    }
+    return { name: 'landing', query }
   }
 
   if (to.meta.requiresUser && !auth.isUser) {
-    return { name: 'start' };
+    return { name: 'landing' }
   }
 
-  return true;
-});
+  return true
+})
 
-export default router;
+export default router

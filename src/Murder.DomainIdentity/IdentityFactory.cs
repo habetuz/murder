@@ -9,8 +9,8 @@ public class IdentityFactory(IIdentityIdGenerator idGenerator)
         return new User(_idGenerator.GenerateUnique(), name);
     }
 
-    public Guest CreateGuest(string name)
+    public Guest CreateGuest()
     {
-        return new Guest(_idGenerator.GenerateUnique(), name);
+        return new Guest(_idGenerator.GenerateUnique());
     }
 }
