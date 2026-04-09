@@ -25,6 +25,16 @@ public class IdentityService(IIdentityRepository identityRepository)
 
     public IdentityId CreateUser(string name)
     {
+        try
+        {
+            _identityRepository.IdentityOfName(name);
+            throw new DuplicateUsernameException(name);
+        }
+        catch (KeyNotFoundException)
+        {
+            // No existing user with this name — proceed
+        }
+
         var user = _identityRepository.IdentityFactory.CreateUser(name);
         _identityRepository.Store(user);
         return user.Id;

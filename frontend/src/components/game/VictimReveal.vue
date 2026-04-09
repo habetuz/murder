@@ -53,16 +53,22 @@ function rehide() {
   cells.value = Array(TOTAL).fill(true)
 }
 
-// Touch/drag support: track which cells we've dragged over
+// Touch/drag support: track pointer state and use pointermove for mobile
 let isDragging = false
 
-function onPointerDown(index: number) {
+function onPointerDown(index: number, e: PointerEvent) {
   isDragging = true
+  // Capture pointer so pointermove keeps firing even outside the element
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   revealCell(index)
 }
 
-function onPointerEnter(index: number) {
-  if (isDragging) revealCell(index)
+function onPointerMove(e: PointerEvent) {
+  if (!isDragging) return
+  const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+  if (!el) return
+  const idx = el.dataset.cellIndex
+  if (idx != null) revealCell(Number(idx))
 }
 
 function onPointerUp() {
@@ -97,18 +103,19 @@ function onPointerUp() {
         v-if="!isFullyRevealed"
         class="absolute inset-0 grid touch-none"
         :style="{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)` }"
+        @pointermove="onPointerMove"
       >
         <div
           v-for="(hidden, i) in cells"
           :key="i"
+          :data-cell-index="i"
           :class="[
             'cursor-crosshair transition-opacity',
             hidden
               ? 'bg-murder-surface-light border-[0.5px] border-murder-surface opacity-100 duration-300'
               : 'opacity-0 pointer-events-none duration-100',
           ]"
-          @pointerdown.prevent="onPointerDown(i)"
-          @pointerenter="onPointerEnter(i)"
+          @pointerdown.prevent="onPointerDown(i, $event)"
         />
       </div>
     </div>

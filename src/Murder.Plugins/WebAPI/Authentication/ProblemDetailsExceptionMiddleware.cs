@@ -64,6 +64,16 @@ public sealed class ProblemDetailsExceptionMiddleware(RequestDelegate next)
                 "/errors/identity-kind-mismatch",
                 "Identity kind mismatch"
             ),
+            DuplicateUsernameException => (
+                StatusCodes.Status409Conflict,
+                "/errors/name-conflict",
+                "Name conflict"
+            ),
+            DuplicateDisplayNameException => (
+                StatusCodes.Status409Conflict,
+                "/errors/name-conflict",
+                "Name conflict"
+            ),
             AuthenticationMethodMismatchException => (
                 StatusCodes.Status400BadRequest,
                 "/errors/unsupported-method",

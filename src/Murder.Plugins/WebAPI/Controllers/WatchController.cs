@@ -66,6 +66,8 @@ public sealed class WatchController(
             var payload = BuildPayload(gid, playerId);
             await WriteSseEvent("SYNC", payload, cancellationToken);
 
+            var lastState = game.State;
+
             // Event loop
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -80,8 +82,23 @@ public sealed class WatchController(
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
-                    // Keepalive timeout — send comment
-                    await WriteSseComment("keepalive", cancellationToken);
+                    // Keepalive timeout — check if game state changed (e.g. end time elapsed)
+                    var currentGame = gameService.GetGame(gid);
+                    if (currentGame is not null && currentGame.State != lastState)
+                    {
+                        lastState = currentGame.State;
+                        var timerPayload = BuildPayload(gid, playerId);
+                        if (timerPayload is null)
+                        {
+                            await WriteSseEvent("GAME_DELETED", new { }, cancellationToken);
+                            return;
+                        }
+                        await WriteSseEvent("UPDATE", timerPayload, cancellationToken);
+                    }
+                    else
+                    {
+                        await WriteSseComment("keepalive", cancellationToken);
+                    }
                     continue;
                 }
 
@@ -107,6 +124,9 @@ public sealed class WatchController(
                     await WriteSseEvent("GAME_DELETED", new { }, cancellationToken);
                     return;
                 }
+
+                var freshGame = gameService.GetGame(gid);
+                if (freshGame is not null) lastState = freshGame.State;
 
                 await WriteSseEvent("UPDATE", updatePayload, cancellationToken);
             }

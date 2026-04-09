@@ -149,6 +149,9 @@ export const api = {
   leaveGame: (gameId: string) =>
     request<void>(`/games/${encodeURIComponent(gameId)}/leave`, { method: 'POST' }),
 
+  kickPlayer: (gameId: string, playerId: string) =>
+    request<void>(`/games/${encodeURIComponent(gameId)}/kick`, { method: 'POST', body: JSON.stringify({ playerId }) }),
+
   startGame: (gameId: string, body?: StartGameRequest) =>
     request<void>(`/games/${encodeURIComponent(gameId)}/start`, { method: 'POST', body: JSON.stringify(body ?? {}) }),
 

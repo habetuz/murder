@@ -222,6 +222,63 @@ public sealed class GamesController(
         return NoContent();
     }
 
+    [HttpPost("/games/{gameId}/kick")]
+    public IActionResult KickPlayer(string gameId, [FromBody] KickRequest request)
+    {
+        if (!TryGetCurrentIdentity(out var identityId))
+        {
+            return UnauthorizedProblem();
+        }
+
+        var id = ToGameId(gameId);
+        var game = _gameService.GetGame(id);
+        if (game is null)
+        {
+            return NotFoundProblem(
+                "/errors/game-not-found",
+                "Game not found",
+                $"Game '{gameId}' does not exist."
+            );
+        }
+
+        if (!IsAdmin(game, ToPlayerId(identityId)))
+        {
+            return ForbiddenProblem("Only the game admin can kick players.");
+        }
+
+        if (game.State != GameState.Pending)
+        {
+            return ValidationProblemResult("Players can only be kicked before the game starts.");
+        }
+
+        var targetPlayerId = new PlayerId(request.PlayerId);
+
+        if (targetPlayerId == ToPlayerId(identityId))
+        {
+            return ValidationProblemResult("You cannot kick yourself.");
+        }
+
+        if (!IsParticipant(id, targetPlayerId))
+        {
+            return NotFoundProblem(
+                "/errors/player-not-found",
+                "Player not found",
+                "The specified player is not in this game."
+            );
+        }
+
+        _gameService.LeaveGame(id, targetPlayerId);
+
+        var targetIdentityId = ToIdentityId(targetPlayerId);
+        if (_identityService.IsGuest(targetIdentityId))
+        {
+            _authenticationService.RemoveMethod<SessionTokenMethodKey>(targetIdentityId);
+        }
+
+        _eventBus.Notify(id);
+        return NoContent();
+    }
+
     [HttpPost("/games/{gameId}/start")]
     public IActionResult StartGame(string gameId, [FromBody] StartGameRequest request)
     {
@@ -523,4 +580,6 @@ public sealed class GamesController(
     public sealed record KillRequest(string VictimPlayerId);
 
     public sealed record KillRespondRequest(bool Accepted);
+
+    public sealed record KickRequest(string PlayerId);
 }

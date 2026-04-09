@@ -129,6 +129,10 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  async function kickPlayer(gameId: string, playerId: string) {
+    await api.kickPlayer(gameId, playerId)
+  }
+
   async function startGame(gameId: string, body?: StartGameRequest) {
     await api.startGame(gameId, body)
   }
@@ -205,6 +209,7 @@ export const useGameStore = defineStore('game', () => {
     createGame,
     joinGame,
     leaveGame,
+    kickPlayer,
     startGame,
     endGame,
     deleteGame,

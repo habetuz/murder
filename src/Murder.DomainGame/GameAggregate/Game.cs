@@ -74,6 +74,14 @@ public class Game : IReadOnlyGame
             throw new UnexpectedGameStateException(GameState.Pending, State);
         }
 
+        bool nameExists = _tmpParticipants!.Any(kvp =>
+            kvp.Key != player &&
+            string.Equals(kvp.Value, displayName, StringComparison.OrdinalIgnoreCase));
+        if (nameExists)
+        {
+            throw new DuplicateDisplayNameException(displayName);
+        }
+
         _tmpParticipants![player] = displayName;
         _participantNames[player] = displayName;
         if (_tmpParticipants.Count == 1)

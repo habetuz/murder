@@ -9,13 +9,24 @@ import PixelButton from '../components/ui/PixelButton.vue'
 const gameStore = useGameStore()
 const auth = useAuthStore()
 
-const winner = computed(() => {
+// Log out guests immediately so their cookie is cleared,
+// but keep the component mounted so they can still see the results.
+if (auth.isGuest) {
+  auth.logout()
+}
+
+const winners = computed(() => {
   if (!gameStore.currentLeaderboard.length) return null
-  const top = [...gameStore.currentLeaderboard].sort((a, b) => b.kills - a.kills)[0]
+  const sorted = [...gameStore.currentLeaderboard].sort((a, b) => b.kills - a.kills)
+  const topKills = sorted[0].kills
+  const tied = sorted.filter(e => e.kills === topKills)
   return {
-    name: gameStore.participantMap.get(top.playerId) ?? top.playerId,
-    kills: top.kills,
-    isYou: top.playerId === auth.player?.id,
+    players: tied.map(e => ({
+      name: gameStore.participantMap.get(e.playerId) ?? e.playerId,
+      isYou: e.playerId === auth.player?.id,
+    })),
+    kills: topKills,
+    anyIsYou: tied.some(e => e.playerId === auth.player?.id),
   }
 })
 </script>
@@ -29,11 +40,11 @@ const winner = computed(() => {
     </div>
 
     <!-- Winner banner -->
-    <div v-if="winner" class="w-full bg-murder-surface border-2 border-murder-warn shadow-pixel text-center py-6 px-4">
-      <p class="font-pixel text-murder-warn text-[8px] mb-3">WINNER</p>
-      <p class="font-pixel text-murder-text text-xl break-all">{{ winner.name }}</p>
-      <p v-if="winner.isYou" class="font-pixel text-murder-accent text-[8px] mt-2">THAT'S YOU!</p>
-      <p class="font-body text-murder-dim text-sm mt-2">{{ winner.kills }} kill{{ winner.kills !== 1 ? 's' : '' }}</p>
+    <div v-if="winners" class="w-full bg-murder-surface border-2 border-murder-warn shadow-pixel text-center py-6 px-4">
+      <p class="font-pixel text-murder-warn text-[8px] mb-3">{{ winners.players.length > 1 ? 'WINNERS' : 'WINNER' }}</p>
+      <p v-for="(p, i) in winners.players" :key="i" class="font-pixel text-murder-text text-xl break-all" :class="{ 'mt-2': i > 0 }">{{ p.name }}</p>
+      <p v-if="winners.anyIsYou" class="font-pixel text-murder-accent text-[8px] mt-2">THAT'S YOU!</p>
+      <p class="font-body text-murder-dim text-sm mt-2">{{ winners.kills }} kill{{ winners.kills !== 1 ? 's' : '' }}</p>
     </div>
     <div v-else class="w-full bg-murder-surface border-2 border-murder-border shadow-pixel text-center py-6 px-4">
       <p class="font-pixel text-murder-dim text-[9px]">GAME ENDED</p>

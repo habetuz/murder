@@ -36,6 +36,11 @@ async function leave() {
     leaveLoading.value = false
   }
 }
+
+async function handleKick(playerId: string) {
+  if (!gameStore.currentGame) return
+  await gameStore.kickPlayer(gameStore.currentGame.id, playerId)
+}
 </script>
 
 <template>
@@ -64,6 +69,8 @@ async function leave() {
         :admin-player-id="gameStore.currentGame.adminPlayerId"
         :current-player-id="auth.player?.id ?? null"
         game-state="pending"
+        :can-kick="gameStore.isAdmin"
+        :on-kick="handleKick"
       />
     </PixelCard>
 
