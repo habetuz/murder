@@ -133,6 +133,11 @@ export const useGameStore = defineStore('game', () => {
     await api.kickPlayer(gameId, playerId)
   }
 
+  async function generateRestoreToken(gameId: string, playerId: string): Promise<string> {
+    const { token } = await api.generateRestoreToken(gameId, playerId)
+    return token
+  }
+
   async function startGame(gameId: string, body?: StartGameRequest) {
     await api.startGame(gameId, body)
   }
@@ -210,6 +215,7 @@ export const useGameStore = defineStore('game', () => {
     joinGame,
     leaveGame,
     kickPlayer,
+    generateRestoreToken,
     startGame,
     endGame,
     deleteGame,

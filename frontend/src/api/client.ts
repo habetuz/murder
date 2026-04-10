@@ -23,6 +23,7 @@ import type {
   CredentialDto,
   PlayerRef,
   WatchPayload,
+  RestoreTokenResponse,
 } from '../types/api'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
@@ -151,6 +152,9 @@ export const api = {
 
   kickPlayer: (gameId: string, playerId: string) =>
     request<void>(`/games/${encodeURIComponent(gameId)}/kick`, { method: 'POST', body: JSON.stringify({ playerId }) }),
+
+  generateRestoreToken: (gameId: string, playerId: string) =>
+    request<RestoreTokenResponse>(`/games/${encodeURIComponent(gameId)}/restore-token`, { method: 'POST', body: JSON.stringify({ playerId }) }),
 
   startGame: (gameId: string, body?: StartGameRequest) =>
     request<void>(`/games/${encodeURIComponent(gameId)}/start`, { method: 'POST', body: JSON.stringify(body ?? {}) }),

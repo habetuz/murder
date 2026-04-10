@@ -41,6 +41,10 @@ async function handleKick(playerId: string) {
   if (!gameStore.currentGame) return
   await gameStore.kickPlayer(gameStore.currentGame.id, playerId)
 }
+
+async function handleRestore(playerId: string): Promise<string> {
+  return gameStore.generateRestoreToken(gameStore.currentGame!.id, playerId)
+}
 </script>
 
 <template>
@@ -71,6 +75,8 @@ async function handleKick(playerId: string) {
         game-state="pending"
         :can-kick="gameStore.isAdmin"
         :on-kick="handleKick"
+        :can-restore="gameStore.isAdmin"
+        :on-restore="handleRestore"
       />
     </PixelCard>
 

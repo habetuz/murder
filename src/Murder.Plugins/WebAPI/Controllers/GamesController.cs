@@ -14,7 +14,8 @@ public sealed class GamesController(
     IdentityService identityService,
     AuthenticationService authenticationService,
     GameEventBus eventBus,
-    PendingKillStore pendingKillStore
+    PendingKillStore pendingKillStore,
+    RestoreTokenStore restoreTokenStore
 ) : ApiControllerBase
 {
     private readonly GameService _gameService = gameService;
@@ -22,6 +23,7 @@ public sealed class GamesController(
     private readonly AuthenticationService _authenticationService = authenticationService;
     private readonly GameEventBus _eventBus = eventBus;
     private readonly PendingKillStore _pendingKillStore = pendingKillStore;
+    private readonly RestoreTokenStore _restoreTokenStore = restoreTokenStore;
 
     [HttpPost("/games")]
     public IActionResult CreateGame([FromBody] CreateGameRequest request)
@@ -277,6 +279,51 @@ public sealed class GamesController(
 
         _eventBus.Notify(id);
         return NoContent();
+    }
+
+    [HttpPost("/games/{gameId}/restore-token")]
+    public IActionResult GenerateRestoreToken(string gameId, [FromBody] RestoreTokenRequest request)
+    {
+        if (!TryGetCurrentIdentity(out var identityId))
+        {
+            return UnauthorizedProblem();
+        }
+
+        var id = ToGameId(gameId);
+        var game = _gameService.GetGame(id);
+        if (game is null)
+        {
+            return NotFoundProblem(
+                "/errors/game-not-found",
+                "Game not found",
+                $"Game '{gameId}' does not exist."
+            );
+        }
+
+        if (!IsAdmin(game, ToPlayerId(identityId)))
+        {
+            return ForbiddenProblem("Only the game admin can generate restore tokens.");
+        }
+
+        var targetPlayerId = new PlayerId(request.PlayerId);
+
+        if (!IsParticipant(id, targetPlayerId))
+        {
+            return NotFoundProblem(
+                "/errors/player-not-found",
+                "Player not found",
+                "The specified player is not in this game."
+            );
+        }
+
+        var targetIdentityId = ToIdentityId(targetPlayerId);
+        if (!_identityService.IsGuest(targetIdentityId))
+        {
+            return ValidationProblemResult("Restore tokens can only be generated for guests.");
+        }
+
+        var token = _restoreTokenStore.Generate(targetIdentityId, id);
+        return Ok(new { token });
     }
 
     [HttpPost("/games/{gameId}/start")]
@@ -582,4 +629,6 @@ public sealed class GamesController(
     public sealed record KillRespondRequest(bool Accepted);
 
     public sealed record KickRequest(string PlayerId);
+
+    public sealed record RestoreTokenRequest(string PlayerId);
 }

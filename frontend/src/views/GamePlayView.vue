@@ -9,6 +9,7 @@ import PendingKillBanner from '../components/game/PendingKillBanner.vue'
 import LeaderboardTable from '../components/game/LeaderboardTable.vue'
 import CountdownTimer from '../components/game/CountdownTimer.vue'
 import AdminControls from '../components/game/AdminControls.vue'
+import ParticipantList from '../components/game/ParticipantList.vue'
 import PixelCard from '../components/ui/PixelCard.vue'
 import ErrorBanner from '../components/ui/ErrorBanner.vue'
 
@@ -42,6 +43,10 @@ async function handleRespondToKill(accepted: boolean) {
   } finally {
     respondLoading.value = false
   }
+}
+
+async function handleRestore(playerId: string): Promise<string> {
+  return gameStore.generateRestoreToken(gameStore.currentGame!.id, playerId)
 }
 </script>
 
@@ -112,6 +117,18 @@ async function handleRespondToKill(accepted: boolean) {
     <!-- Admin controls -->
     <PixelCard v-if="gameStore.isAdmin" class="w-full">
       <AdminControls :game="gameStore.currentGame" />
+    </PixelCard>
+
+    <!-- Admin: participant management (restore guests) -->
+    <PixelCard v-if="gameStore.isAdmin" title="PLAYERS" class="w-full">
+      <ParticipantList
+        :participants="gameStore.currentParticipants"
+        :admin-player-id="gameStore.currentGame.adminPlayerId"
+        :current-player-id="auth.player?.id ?? null"
+        game-state="running"
+        :can-restore="true"
+        :on-restore="handleRestore"
+      />
     </PixelCard>
   </div>
 </template>

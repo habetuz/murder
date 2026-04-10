@@ -133,6 +133,10 @@ export interface ParticipantsResponse {
   participants: ParticipantDto[]
 }
 
+export interface RestoreTokenResponse {
+  token: string
+}
+
 export interface ProblemDetails {
   type?: string
   title?: string

@@ -13,13 +13,15 @@ public sealed class AuthController(
     AuthenticationService authenticationService,
     IdentityService identityService,
     IIdentityRepository identityRepository,
-    ICredentialRepository credentialRepository
+    ICredentialRepository credentialRepository,
+    RestoreTokenStore restoreTokenStore
 ) : ApiControllerBase
 {
     private readonly AuthenticationService _authenticationService = authenticationService;
     private readonly IdentityService _identityService = identityService;
     private readonly IIdentityRepository _identityRepository = identityRepository;
     private readonly ICredentialRepository _credentialRepository = credentialRepository;
+    private readonly RestoreTokenStore _restoreTokenStore = restoreTokenStore;
 
     [HttpPost("login")]
     public IActionResult Login([FromBody] LoginRequest request)
@@ -127,6 +129,40 @@ public sealed class AuthController(
                 },
             }
         );
+    }
+
+    [HttpGet("restore/{token}")]
+    public IActionResult Restore(string token)
+    {
+        var restoreToken = _restoreTokenStore.Redeem(token);
+        if (restoreToken is null)
+        {
+            return NotFoundProblem(
+                "/errors/invalid-restore-token",
+                "Invalid restore token",
+                "This restore link is invalid or has expired."
+            );
+        }
+
+        _authenticationService.RemoveMethod<SessionTokenMethodKey>(restoreToken.IdentityId);
+
+        var sessionToken = _authenticationService.AddMethod<SessionTokenMethodKey>(
+            restoreToken.IdentityId,
+            new SessionTokenEnrollmentData(restoreToken.IdentityId)
+        );
+
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return Problem(
+                type: "/errors/internal",
+                title: "Internal server error",
+                detail: "Failed to create session token.",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
+
+        SessionCookie.Append(Response, Request, sessionToken);
+        return Redirect($"/game/{restoreToken.GameId.Id}");
     }
 
     public sealed record LoginRequest(string Type, string Username, string Password);
