@@ -13,9 +13,10 @@ internal class MurderChain
 
     internal MurderChain(PlayerId[] participants, IShuffleParticipants participantsShuffler)
     {
-        participantsShuffler.Shuffle(participants);
+        var shuffled = (PlayerId[])participants.Clone();
+        participantsShuffler.Shuffle(shuffled);
 
-        _chain = new(participants.Select(player => new PlayerStateMapping(player)));
+        _chain = new(shuffled.Select(player => new PlayerStateMapping(player)));
     }
 
     /// <summary>
