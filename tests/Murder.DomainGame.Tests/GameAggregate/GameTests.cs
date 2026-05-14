@@ -138,6 +138,43 @@ public class GameTests
         Assert.Equal(PlayerC, nextVictim);
     }
 
+    // ── Forfeit ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Forfeit_MarksPlayerDead_WithoutKillCredit()
+    {
+        var clock = new FakeDateTimeOffsetProvider();
+        var game = CreateRunningGame(clock, AdminId, PlayerB, PlayerC);
+
+        game.Forfeit(PlayerB);
+
+        Assert.Equal(PlayerC, game.Victim(AdminId));
+        Assert.Equal(0u, game.Leaderboard()[AdminId]);
+    }
+
+    [Fact]
+    public void Forfeit_EndsGame_WhenOnlyOnePlayerLeft()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var clock = new FakeDateTimeOffsetProvider { Now = now };
+        var game = CreateRunningGame(clock, AdminId, PlayerB);
+
+        game.Forfeit(PlayerB);
+        clock.Now = now.AddSeconds(1); // advance past EndTime
+
+        Assert.Equal(GameState.Ended, game.State);
+    }
+
+    [Fact]
+    public void Forfeit_Throws_WhenGameNotRunning()
+    {
+        var clock = new FakeDateTimeOffsetProvider();
+        var game = new Game(TestGameId, "Night of Knives", AdminId, "Admin", clock, participantsShuffler);
+        game.Join(PlayerB, "PlayerB");
+
+        Assert.Throws<UnexpectedGameStateException>(() => game.Forfeit(PlayerB));
+    }
+
     // ── Leaderboard (mirrors MurderChainTests.Leaderboard_TracksKillsPerPlayer) ──
 
     [Fact]

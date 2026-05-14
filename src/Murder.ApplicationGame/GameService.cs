@@ -96,6 +96,13 @@ public class GameService(IGameRepository gameRepository)
         _repository.Delete(game);
     }
 
+    public void ForfeitGame(GameId game, PlayerId player)
+    {
+        var gameEntity = _repository.FindGameById(game) ?? throw new GameNotFoundException(game);
+        gameEntity.Forfeit(player);
+        _repository.Update(gameEntity);
+    }
+
     public PlayerId Victim(GameId game, PlayerId murder)
     {
         var gameEntity = _repository.FindGameById(game) ?? throw new GameNotFoundException(game);

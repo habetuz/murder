@@ -71,6 +71,24 @@ internal class MurderChain
         }
     }
 
+    /// <summary>
+    /// Marks a player as dead without crediting any kill.
+    /// Returns true if 2+ alive players remain, false if game should end.
+    /// </summary>
+    /// <exception cref="PlayerNotParticipating"></exception>
+    /// <exception cref="PlayerDeadException"></exception>
+    internal bool Forfeit(PlayerId player)
+    {
+        var node = _chain.Find(new(player)) ?? throw new PlayerNotParticipating(player);
+        if (node.Value.State is PlayerState.Dead)
+        {
+            throw new PlayerDeadException(player);
+        }
+
+        node.ValueRef.State = PlayerState.Dead;
+        return VictimsAvailable();
+    }
+
     internal bool VictimsAvailable()
     {
         var alivePlayers = _chain.Sum(node => node.State is PlayerState.Alive ? 1 : 0);

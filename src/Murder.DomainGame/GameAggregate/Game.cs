@@ -141,6 +141,20 @@ public class Game : IReadOnlyGame
         return newVictim;
     }
 
+    public void Forfeit(PlayerId player)
+    {
+        if (State != GameState.Running)
+        {
+            throw new UnexpectedGameStateException(GameState.Running, State);
+        }
+
+        var victimsRemain = _murderChain!.Forfeit(player);
+        if (!victimsRemain)
+        {
+            End();
+        }
+    }
+
     public Dictionary<PlayerId, uint> Leaderboard()
     {
         if (State is GameState.Pending)

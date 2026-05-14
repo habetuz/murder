@@ -24,7 +24,7 @@ const copied = ref(false)
 function canKickPlayer(p: ParticipantDto): boolean {
   return !!(
     props.canKick &&
-    props.gameState === 'pending' &&
+    (props.gameState === 'pending' || props.gameState === 'running') &&
     p.id !== props.adminPlayerId &&
     p.id !== props.currentPlayerId
   )

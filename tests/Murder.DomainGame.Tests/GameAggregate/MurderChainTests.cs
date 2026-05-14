@@ -61,6 +61,50 @@ public class MurderChainTests
         Assert.Throws<IncorrectVictimException>(() => chain.Kill(PlayerA, PlayerC));
     }
 
+    // ── Forfeit ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Forfeit_MarksPlayerDead_WithoutCreditingKill()
+    {
+        // Chain: A → B → C. B forfeits. A's new victim is C, nobody gets a kill.
+        var chain = new MurderChain([PlayerA, PlayerB, PlayerC], participantsShuffler);
+
+        var victimsRemain = chain.Forfeit(PlayerB);
+
+        Assert.True(victimsRemain);
+        Assert.Equal(PlayerC, chain.Victim(PlayerA));
+        Assert.Equal(0u, chain.Leaderboard()[PlayerA]);
+        Assert.Equal(0u, chain.Leaderboard()[PlayerB]);
+    }
+
+    [Fact]
+    public void Forfeit_ReturnsFalse_WhenOnlyOnePlayerLeft()
+    {
+        var chain = new MurderChain([PlayerA, PlayerB], participantsShuffler);
+
+        var victimsRemain = chain.Forfeit(PlayerB);
+
+        Assert.False(victimsRemain);
+    }
+
+    [Fact]
+    public void Forfeit_Throws_WhenPlayerAlreadyDead()
+    {
+        var chain = new MurderChain([PlayerA, PlayerB, PlayerC], participantsShuffler);
+        chain.Kill(PlayerA, PlayerB);
+
+        Assert.Throws<PlayerDeadException>(() => chain.Forfeit(PlayerB));
+    }
+
+    [Fact]
+    public void Forfeit_Throws_WhenPlayerNotInChain()
+    {
+        var chain = new MurderChain([PlayerA, PlayerB], participantsShuffler);
+        var unknown = new PlayerId("unknown");
+
+        Assert.Throws<PlayerNotParticipating>(() => chain.Forfeit(unknown));
+    }
+
     // ── Leaderboard ───────────────────────────────────────────────────────────
 
     [Fact]

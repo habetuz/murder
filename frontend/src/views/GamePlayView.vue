@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import { useAuthStore } from '../stores/auth'
 import { ApiError } from '../api/client'
@@ -11,15 +12,20 @@ import CountdownTimer from '../components/game/CountdownTimer.vue'
 import AdminControls from '../components/game/AdminControls.vue'
 import ParticipantList from '../components/game/ParticipantList.vue'
 import PixelCard from '../components/ui/PixelCard.vue'
+import PixelButton from '../components/ui/PixelButton.vue'
 import ErrorBanner from '../components/ui/ErrorBanner.vue'
 
 const gameStore = useGameStore()
 const auth = useAuthStore()
+const router = useRouter()
 
 const killError = ref<string | null>(null)
 const killLoading = ref(false)
 const respondLoading = ref(false)
 const respondError = ref<string | null>(null)
+const forfeitLoading = ref(false)
+const forfeitError = ref<string | null>(null)
+const showForfeitConfirm = ref(false)
 
 async function handleKill(victimId: string) {
   killLoading.value = true
@@ -47,6 +53,29 @@ async function handleRespondToKill(accepted: boolean) {
 
 async function handleRestore(playerId: string): Promise<string> {
   return gameStore.generateRestoreToken(gameStore.currentGame!.id, playerId)
+}
+
+async function handleKick(playerId: string) {
+  if (!gameStore.currentGame) return
+  await gameStore.kickPlayer(gameStore.currentGame.id, playerId)
+}
+
+async function handleForfeit() {
+  if (!gameStore.currentGame) return
+  forfeitLoading.value = true
+  forfeitError.value = null
+  try {
+    await gameStore.leaveGame(gameStore.currentGame.id)
+    if (auth.isGuest) {
+      auth.clearAuthState()
+    }
+    router.push({ name: 'landing' })
+  } catch (e) {
+    forfeitError.value = e instanceof ApiError ? (e.problem.detail ?? e.message) : 'Failed to forfeit'
+  } finally {
+    forfeitLoading.value = false
+    showForfeitConfirm.value = false
+  }
 }
 </script>
 
@@ -119,16 +148,40 @@ async function handleRestore(playerId: string): Promise<string> {
       <AdminControls :game="gameStore.currentGame" />
     </PixelCard>
 
-    <!-- Admin: participant management (restore guests) -->
+    <!-- Admin: participant management (restore guests, kick) -->
     <PixelCard v-if="gameStore.isAdmin" title="PLAYERS" class="w-full">
       <ParticipantList
         :participants="gameStore.currentParticipants"
         :admin-player-id="gameStore.currentGame.adminPlayerId"
         :current-player-id="auth.player?.id ?? null"
         game-state="running"
+        :can-kick="true"
+        :on-kick="handleKick"
         :can-restore="true"
         :on-restore="handleRestore"
       />
     </PixelCard>
+
+    <!-- Forfeit (non-admin) -->
+    <template v-if="!gameStore.isAdmin">
+      <ErrorBanner :message="forfeitError" />
+      <div v-if="!showForfeitConfirm">
+        <PixelButton variant="ghost" size="sm" @click="showForfeitConfirm = true">
+          FORFEIT
+        </PixelButton>
+      </div>
+      <PixelCard v-else variant="danger" class="w-full text-center py-4">
+        <p class="font-pixel text-[9px] text-murder-danger mb-2">ARE YOU SURE?</p>
+        <p class="font-body text-murder-dim text-xs mb-3">You will be eliminated from the game.</p>
+        <div class="flex justify-center gap-3">
+          <PixelButton variant="danger" size="sm" :loading="forfeitLoading" @click="handleForfeit">
+            YES, FORFEIT
+          </PixelButton>
+          <PixelButton variant="ghost" size="sm" @click="showForfeitConfirm = false">
+            CANCEL
+          </PixelButton>
+        </div>
+      </PixelCard>
+    </template>
   </div>
 </template>

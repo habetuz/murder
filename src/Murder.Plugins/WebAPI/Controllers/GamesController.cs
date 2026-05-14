@@ -213,14 +213,35 @@ public sealed class GamesController(
             return UnauthorizedProblem();
         }
 
-        _gameService.LeaveGame(ToGameId(gameId), ToPlayerId(identityId));
+        var id = ToGameId(gameId);
+        var playerId = ToPlayerId(identityId);
+        var game = _gameService.GetGame(id);
+        if (game is null)
+        {
+            return NotFoundProblem(
+                "/errors/game-not-found",
+                "Game not found",
+                $"Game '{gameId}' does not exist."
+            );
+        }
+
+        if (game.State == GameState.Running)
+        {
+            _pendingKillStore.Remove(id, playerId);
+            _pendingKillStore.RemoveForVictim(id, playerId);
+            _gameService.ForfeitGame(id, playerId);
+        }
+        else
+        {
+            _gameService.LeaveGame(id, playerId);
+        }
 
         if (_identityService.IsGuest(identityId))
         {
             _authenticationService.RemoveMethod<SessionTokenMethodKey>(identityId);
         }
 
-        _eventBus.Notify(ToGameId(gameId));
+        _eventBus.Notify(id);
         return NoContent();
     }
 
@@ -248,9 +269,9 @@ public sealed class GamesController(
             return ForbiddenProblem("Only the game admin can kick players.");
         }
 
-        if (game.State != GameState.Pending)
+        if (game.State is not (GameState.Pending or GameState.Running))
         {
-            return ValidationProblemResult("Players can only be kicked before the game starts.");
+            return ValidationProblemResult("Players can only be kicked before or during the game.");
         }
 
         var targetPlayerId = new PlayerId(request.PlayerId);
@@ -269,7 +290,16 @@ public sealed class GamesController(
             );
         }
 
-        _gameService.LeaveGame(id, targetPlayerId);
+        if (game.State == GameState.Running)
+        {
+            _pendingKillStore.Remove(id, targetPlayerId);
+            _pendingKillStore.RemoveForVictim(id, targetPlayerId);
+            _gameService.ForfeitGame(id, targetPlayerId);
+        }
+        else
+        {
+            _gameService.LeaveGame(id, targetPlayerId);
+        }
 
         var targetIdentityId = ToIdentityId(targetPlayerId);
         if (_identityService.IsGuest(targetIdentityId))
