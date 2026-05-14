@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'Murder Party Game',
         short_name: 'Murder',
-        description: 'Eliminate your target. Inherit theirs. Last one standing wins.',
+        description: 'Eliminate your target. Inherit theirs. Murder with the most kills wins.',
         theme_color: '#1a0a2e',
         background_color: '#1a0a2e',
         display: 'standalone',

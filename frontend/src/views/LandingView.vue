@@ -162,7 +162,7 @@ async function joinAsUser() {
         MURDER
       </h1>
       <p class="font-body text-murder-dim text-sm max-w-sm">
-        Eliminate your target. Inherit theirs. Last one standing wins.
+        Eliminate your target. Inherit theirs. Murder with the most kills wins.
       </p>
       <div class="border-2 border-murder-border bg-murder-surface shadow-pixel p-4 text-left max-w-sm w-full">
         <p class="font-pixel text-[7px] text-murder-warn mb-3">HOW TO PLAY</p>
@@ -170,7 +170,7 @@ async function joinAsUser() {
           <li>Join a game and get your secret target.</li>
           <li>Find your target IRL and pass them an object.</li>
           <li>They're eliminated — you inherit their target.</li>
-          <li>Last player standing wins.</li>
+          <li>The most sucessfull Murder wins.</li>
         </ol>
       </div>
     </div>
