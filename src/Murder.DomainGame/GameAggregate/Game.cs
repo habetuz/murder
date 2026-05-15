@@ -13,12 +13,12 @@ public class Game : IReadOnlyGame
     {
         get
         {
-            if (StartTime is null || _dateTimeProvider.Now < StartTime)
+            if (StartTime is null || _dateTimeProvider.GetLocalNow() < StartTime)
             {
                 return GameState.Pending;
             }
 
-            if (EndTime is not null && EndTime < _dateTimeProvider.Now)
+            if (EndTime is not null && EndTime < _dateTimeProvider.GetLocalNow())
             {
                 return GameState.Ended;
             }
@@ -46,7 +46,7 @@ public class Game : IReadOnlyGame
     MurderChain? _murderChain;
     Dictionary<PlayerId, string>? _tmpParticipants;
     Dictionary<PlayerId, string> _participantNames;
-    readonly IDateTimeOffsetProvider _dateTimeProvider;
+    readonly TimeProvider _dateTimeProvider;
     readonly IShuffleParticipants _participantShuffler;
 
     internal Game(
@@ -54,7 +54,7 @@ public class Game : IReadOnlyGame
         string name,
         PlayerId admin,
         string adminDisplayName,
-        IDateTimeOffsetProvider dateTimeProvider,
+        TimeProvider dateTimeProvider,
         IShuffleParticipants participantsShuffler
     )
     {
@@ -177,7 +177,7 @@ public class Game : IReadOnlyGame
             throw new NotEnoughParticipantsException(_tmpParticipants.Count);
         }
 
-        StartTime = _dateTimeProvider.Now;
+        StartTime = _dateTimeProvider.GetLocalNow();
 
         // Unsert end time if it is invalid
         if (EndTime < StartTime)
@@ -191,7 +191,7 @@ public class Game : IReadOnlyGame
 
     public void End()
     {
-        EndTime = _dateTimeProvider.Now;
+        EndTime = _dateTimeProvider.GetLocalNow();
     }
 
     public void SetEnd(DateTimeOffset end)
