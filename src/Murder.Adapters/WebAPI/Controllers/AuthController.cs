@@ -1,0 +1,169 @@
+using Microsoft.AspNetCore.Mvc;
+using Murder.ApplicationIdentity;
+using Murder.DomainIdentity;
+using Murder.Adapters.AuthenticationMethod.Password;
+using Murder.Adapters.AuthenticationMethod.SessionToken;
+using Murder.Adapters.WebAPI.Authentication;
+
+namespace Murder.Adapters.WebAPI.Controllers;
+
+[ApiController]
+[Route("auth")]
+public sealed class AuthController(
+    AuthenticationService authenticationService,
+    IdentityService identityService,
+    IIdentityRepository identityRepository,
+    ICredentialRepository credentialRepository,
+    RestoreTokenStore restoreTokenStore
+) : ApiControllerBase
+{
+    private readonly AuthenticationService _authenticationService = authenticationService;
+    private readonly IdentityService _identityService = identityService;
+    private readonly IIdentityRepository _identityRepository = identityRepository;
+    private readonly ICredentialRepository _credentialRepository = credentialRepository;
+    private readonly RestoreTokenStore _restoreTokenStore = restoreTokenStore;
+
+    [HttpPost("login")]
+    public IActionResult Login([FromBody] LoginRequest request)
+    {
+        if (!string.Equals(request.Type, "password", StringComparison.OrdinalIgnoreCase))
+        {
+            return UnsupportedMethodProblem("Unsupported login type.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return ValidationProblemResult("Username and password are required.");
+        }
+
+        IdentityId identityId;
+        try
+        {
+            identityId = _identityRepository.IdentityOfName(request.Username);
+        }
+        catch (KeyNotFoundException)
+        {
+            return UnauthorizedProblem("Credentials are invalid.");
+        }
+        catch (InvalidOperationException)
+        {
+            return UnauthorizedProblem("Credentials are invalid.");
+        }
+
+        var authenticatedIdentity = _authenticationService.Authenticate<PasswordMethodKey>(
+            new PasswordIncomingCredential(identityId, request.Password)
+        );
+
+        if (authenticatedIdentity is null)
+        {
+            return UnauthorizedProblem("Credentials are invalid.");
+        }
+
+        var sessionToken = _authenticationService.AddMethod<SessionTokenMethodKey>(
+            authenticatedIdentity.Value,
+            new SessionTokenEnrollmentData(authenticatedIdentity.Value)
+        );
+
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return Problem(
+                type: "/errors/internal",
+                title: "Internal server error",
+                detail: "Failed to create session token.",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
+
+        SessionCookie.Append(Response, Request, sessionToken);
+        return Ok();
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        if (!TryGetCurrentIdentity(out var identityId))
+        {
+            return UnauthorizedProblem();
+        }
+
+        _authenticationService.RemoveMethod<SessionTokenMethodKey>(identityId);
+        SessionCookie.Expire(Response, Request);
+        return NoContent();
+    }
+
+    [HttpGet("session")]
+    public IActionResult Session()
+    {
+        if (!TryGetCurrentIdentity(out var identityId))
+        {
+            return UnauthorizedProblem();
+        }
+
+        Identity identity;
+        try
+        {
+            identity = _identityService.GetIdentity(identityId);
+        }
+        catch (KeyNotFoundException)
+        {
+            return UnauthorizedProblem();
+        }
+
+        var expiresAt = _credentialRepository
+            .FindAll<SessionTokenMethodKey>(identityId)
+            .Select(id => _credentialRepository.FindById<SessionTokenMethodKey>(id))
+            .Where(stored => stored is not null)
+            .Select(stored => stored!.Value.credential)
+            .OfType<SessionTokenStoredCredential>()
+            .Select(credential => (DateTimeOffset?)credential.ExpiresAtUtc)
+            .OrderByDescending(value => value)
+            .FirstOrDefault();
+
+        return Ok(
+            new
+            {
+                player = ToPlayerRef(identity),
+                session = new
+                {
+                    expiresAt,
+                },
+            }
+        );
+    }
+
+    [HttpGet("restore/{token}")]
+    public IActionResult Restore(string token)
+    {
+        var restoreToken = _restoreTokenStore.Redeem(token);
+        if (restoreToken is null)
+        {
+            return NotFoundProblem(
+                "/errors/invalid-restore-token",
+                "Invalid restore token",
+                "This restore link is invalid or has expired."
+            );
+        }
+
+        _authenticationService.RemoveMethod<SessionTokenMethodKey>(restoreToken.IdentityId);
+
+        var sessionToken = _authenticationService.AddMethod<SessionTokenMethodKey>(
+            restoreToken.IdentityId,
+            new SessionTokenEnrollmentData(restoreToken.IdentityId)
+        );
+
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return Problem(
+                type: "/errors/internal",
+                title: "Internal server error",
+                detail: "Failed to create session token.",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
+
+        SessionCookie.Append(Response, Request, sessionToken);
+        return Redirect($"/game/{restoreToken.GameId.Id}");
+    }
+
+    public sealed record LoginRequest(string Type, string Username, string Password);
+}
