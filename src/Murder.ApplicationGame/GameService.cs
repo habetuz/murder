@@ -20,11 +20,6 @@ public class GameService(IGameRepository gameRepository)
         }
     }
 
-    public GameId[] ListPublicGames()
-    {
-        return _repository.ListPublic();
-    }
-
     public IReadOnlyGame? GetGame(GameId game)
     {
         return _repository.FindGameById(game);
@@ -63,9 +58,9 @@ public class GameService(IGameRepository gameRepository)
         _repository.Update(gameEntity);
     }
 
-    public GameId CreateGame(string name, PlayerId admin, string adminDisplayName, Visibility visibility)
+    public GameId CreateGame(string name, PlayerId admin, string adminDisplayName)
     {
-        var gameEntity = _repository.GameFactory.CreateGame(name, admin, adminDisplayName, visibility);
+        var gameEntity = _repository.GameFactory.CreateGame(name, admin, adminDisplayName);
         _repository.Store(gameEntity);
         return gameEntity.Id;
     }

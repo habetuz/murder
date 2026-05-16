@@ -4,7 +4,6 @@ public interface IReadOnlyGame
 {
     public GameId Id { get; }
     public string Name { get; }
-    public Visibility Visibility { get; }
     public string? Description { get; }
     public DateTimeOffset? StartTime { get; }
     public DateTimeOffset? EndTime { get; }

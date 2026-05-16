@@ -57,14 +57,6 @@ public class InMemoryGameRepository(
         return gameId;
     }
 
-    public GameId[] ListPublic()
-    {
-        return
-        [
-            .. from pair in _games where pair.Value.Visibility is Visibility.Public select pair.Key,
-        ];
-    }
-
     public void Store(Game game)
     {
         if (_games.ContainsKey(game.Id))

@@ -62,8 +62,8 @@ public sealed class WatchController(
         var channel = eventBus.Subscribe(gid);
         try
         {
-            // Send initial SYNC
-            var payload = BuildPayload(gid, playerId);
+            // Send initial SYNC. Return value cannot be null here because we already verified the games existence above.
+            var payload = BuildPayload(gid, playerId)!;
             await WriteSseEvent("SYNC", payload, cancellationToken);
 
             var lastState = game.State;

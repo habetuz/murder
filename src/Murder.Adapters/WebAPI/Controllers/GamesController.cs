@@ -48,7 +48,7 @@ public sealed class GamesController(
             return ValidationProblemResult("DisplayName is required.");
         }
 
-        var gameId = _gameService.CreateGame(request.Name, ToPlayerId(identityId), request.DisplayName, Visibility.Private);
+        var gameId = _gameService.CreateGame(request.Name, ToPlayerId(identityId), request.DisplayName);
 
         if (!string.IsNullOrWhiteSpace(request.Description))
         {
