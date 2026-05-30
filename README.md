@@ -1,65 +1,13 @@
 # Murder
 
-A group game large groups.
+A group game for large groups. See ./uml.wsd for code structure.
 
-## Domain
-
-**Guest**
-
-Single game user without login information
-- name
- 
-**User**
-
-Permanent user with login information
-- name
-- games
-- login (adapter)
-
-**Player**
-
-Per game instance of a guest or user that is participating in a game
-- kills
-
-**Admin**
-
-player administrating a game. Each game has one administrator
-
-**Game**
-
-A single round of murder
-- id
-- player(s)
-- admin
-- murderChain
-- startTime
-- endTime
-
-**MurderChain**
-
-Responsible for keeping track of murder to victim assignments
-- assignments
-
-## HTTP API Design (Implementation Target)
+## HTTP API Design
 
 This section defines the target HTTP contract for implementing WebAPI controllers around:
 - `IdentityService`
 - `AuthenticationService`
 - `GameService`
-
-The current controllers are a partial implementation and may change to match this contract.
-
-### Scope and Decisions
-
-- Auth transport: session cookie only.
-- No URI version prefix for now.
-- API-facing IDs are player-facing IDs only.
-- Internal `IdentityId` to `PlayerId` context mapping remains a backend concern.
-- Guest creation requires selecting the initial game in the same request.
-- Guests cannot join additional games after creation.
-- Guest leave is equivalent to guest self-deletion.
-- All games are private. Ignore public/private discovery in API behavior.
-- Errors follow RFC 9457 Problem Details (`application/problem+json`).
 
 ### Base Conventions
 
